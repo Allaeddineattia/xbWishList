@@ -68,86 +68,61 @@ mod my_date_format {
 #[serde(rename_all = "PascalCase")]
 pub struct Product{
 
-    // pub last_modified_date: String,
-    // localized_properties: Vec<LocalizedProperty>,
-    // market_properties: Vec<MarketProperty>,
-    // product_a_schema: Option<String>,
-    // product_b_schema: Option<String>,
-    // product_id: String,
-    // properties: Option<ProductProperties>,
-    // alternate_ids: Option<Vec<String>>,
-    // domain_data_version: Option<String>,
-    // ingestion_source: Option<String>,
-    // is_microsoft_product: Option<bool>,
-    // preferred_sku_id: Option<String>,
-    // product_type: Option<Value>,
-    // validation_data: Option<ValidationData>,
-    // merchandizing_tags: Option<Vec<Value>>,
-    // part_d: Option<String>,
-    // product_family: String,
-    // schema_version: Option<String>,
-    // product_kind: String,
-    // display_sku_availabilities: Vec<DisplaySkuAvailability>,
     #[serde(with = "my_date_format")]
     pub last_modified_date: DateTime<Utc>,
-    localized_properties: Value,
-    market_properties: Value,
-    product_a_schema: Value,
-    product_b_schema: Value,
-    product_id: Value,
-    properties: Option<Value>,
-    alternate_ids: Option<Vec<Value>>,
-    domain_data_version: Value,
-    ingestion_source: Value,
+    pub localized_properties: Vec<LocalizedProperty>,
+    pub market_properties: Vec<MarketProperty>,
+    pub product_a_schema: Option<String>,
+    pub product_b_schema: Option<String>,
+    pub product_id: String,
+    properties: Option<ProductProperties>,
+    alternate_ids: Option<Vec<AlternateId>>,
+    domain_data_version: Option<String>,
+    ingestion_source: Option<String>,
     is_microsoft_product: Option<bool>,
-    preferred_sku_id: Value,
-    product_type: Option<Value>,
-    validation_data: Option<Value>,
+    preferred_sku_id: Option<String>,
+    product_type: Option<String>,
+    validation_data: Option<ValidationData>,
     merchandizing_tags: Option<Vec<Value>>,
-    part_d: Option<Value>,
-    product_family: Value,
-    schema_version: Value,
-    product_kind: Value,
-    display_sku_availabilities: Vec<Value>,
+    part_d: Option<String>,
+    product_family: String,
+    schema_version: Option<String>,
+    product_kind: String,
+    display_sku_availabilities: Vec<DisplaySkuAvailability>,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct LocalizedProperty{
-    // developer_name: Optional[str]
-    // display_platform_properties: Optional[Any]
-    // publisher_name: Optional[str]
-    // publisher_website_uri: Optional[str]
-    // support_uri: Optional[str]
-    // eligibility_properties: Optional[Any]
-    // franchises: Optional[List]
-    // images: List[Image]
-    // videos: Optional[List[Video]]
-    // product_description: Optional[str]
-    // product_title: str
-    // short_title: Optional[str]
-    // sort_title: Optional[str]
-    // friendly_title: Optional[str]
-    // short_description: Optional[str]
-    // search_titles: Optional[List[SearchTitle]]
-    // voice_title: Optional[str]
-    // render_group_details: Optional[Any]
-    // product_display_ranks: Optional[List]
-    // interactive_model_config: Optional[Any]
-    // interactive_3d_enabled: Optional[bool] = Field(alias="Interactive3DEnabled")
-    // language: Optional[str]
-    // markets: Optional[List[str]]
-    developer_name: Value, 
-    display_platform_properties: Value, 
-    publisher_name: Value, 
-    publisher_website_uri: Value, 
-    support_uri: Value, 
-    eligibility_properties: Value, 
-    franchises: Value, 
-    images: Value, 
+    pub developer_name: Option<String>,
+    pub display_platform_properties: Option<Value>,
+    pub publisher_name: Option<String>,
+    pub publisher_website_uri: Option<String>,
+    pub support_uri: Option<String>,
+    pub eligibility_properties: Option<Value>,// need some work
+    pub franchises: Option<Vec<Value>>,
+    pub images: Vec<Image>,
+    // videos: Option<Vec<Video>>
+    // product_description: Option<String>
+    pub product_title: String,
+    // short_title: Option<String>
+    // sort_title: Option<String>
+    // friendly_title: Option<String>
+    // short_description: Option<String>
+    // search_titles: Option<Vec<SearchTitle>>
+    // voice_title: Option<String>
+    // render_group_details: Option<Value>
+    // product_display_ranks: Option<Vec>
+    // interactive_model_config: Option<Value>
+    // interactive_3d_enabled: Option<bool> = Field(alias="interactive3DEnabled")
+    // language: Option<String>
+    // markets: Option<Vec<String>>
+
+
+
+    //images: Value, 
     videos: Value, 
     product_description: Value, 
-    product_title: Value, 
     short_title: Value, 
     sort_title: Value, 
     friendly_title: Value, 
@@ -157,24 +132,43 @@ pub struct LocalizedProperty{
     render_group_details: Value, 
     product_display_ranks: Value, 
     interactive_model_config: Value, 
-    interactive_3d_enabled: Value,  
+    interactive_3_d_enabled: Value,  
     language: Value, 
     markets: Value, 
+
+    
 }
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct Image {
+    file_id: Option<String>,
+    e_i_s_listing_identifier: Value,
+    background_color: Option<String>,
+    caption: Option<String>,
+    file_size_in_bytes: i32,
+    foreground_color: Option<String>,
+    pub height: i32,
+    image_position_info: Option<String>,
+    pub image_purpose: String,
+    unscaled_image_s_h_a_256_hash: Option<String>,
+    pub uri: String,
+    pub width: i32,
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct MarketProperty{
-    // original_release_date: Optional[datetime]
-    // original_release_friendly_name: Optional[str]
-    // minimum_user_age: Optional[int]
-    // content_ratings: Optional[List[ContentRating]]
-    // related_products: Optional[List]
-    // usage_data: List[UsageData]
-    // bundle_config: Optional[Any]
-    // markets: Optional[List[str]]
+    // original_release_date: Option<datetime>
+    original_release_friendly_name: Option<String>,
+    // minimum_user_age: Option<i32>
+    // content_ratings: Option<Vec<ContentRating>>
+    // related_products: Option<Vec>
+    // usage_data: Vec<UsageData>
+    // bundle_config: Option<Value>
+    // markets: Option<Vec<String>>
 
-    original_release_date: Value, 
-    original_release_friendly_name: Value, 
+    original_release_date: Value,  
     minimum_user_age: Value, 
     content_ratings: Value, 
     related_products: Value, 
@@ -182,49 +176,50 @@ pub struct MarketProperty{
     bundle_config: Value, 
     markets: Value, 
 }
+
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct ProductProperties{
-    // attributes: Optional[List]
-    // can_install_to_sd_card: Optional[bool] = Field(alias="CanInstallToSDCard")
-    // category: Optional[str]
-    // sub_category: Optional[str]
-    // categories: Optional[List[str]]
-    // extensions: Any
-    // is_accessible: Optional[bool]
-    // is_line_of_business_app: Optional[bool]
-    // is_published_to_legacy_windows_phone_store: Optional[bool]
-    // is_published_to_legacy_windows_store: Optional[bool]
-    // is_settings_app: Optional[bool]
-    // package_family_name: Optional[str]
-    // package_identity_name: Optional[str]
-    // publisher_certificate_name: Optional[str]
-    // publisher_id: str
-    // xbox_live_tier: Any
-    // xbox_xpa: Any = Field(alias="XboxXPA")
-    // xbox_cross_gen_set_id: Any
-    // xbox_console_gen_optimized: Any
-    // xbox_console_gen_compatible: Any
-    // xbox_live_gold_required: Optional[bool]
-    // ownership_type: Any
-    // pdp_background_color: Optional[str]
-    // has_add_ons: Optional[bool]
-    // revision_id: str
-    // product_group_id: Optional[str]
-    // product_group_name: Optional[str]
+    // attributes: Option<Vec>
+    // can_install_to_sd_card: Option<bool> = Field(alias="CanInstallToSDCard")
+    // category: Option<String>
+    sub_category: Option<String>,
+    // categories: Option<Vec<String>>
+    // extensions: Value
+    // is_accessible: Option<bool>
+    // is_line_of_business_app: Option<bool>
+    // is_published_to_legacy_windows_phone_store: Option<bool>
+    // is_published_to_legacy_windows_store: Option<bool>
+    is_settings_app: Option<bool>,
+    // package_family_name: Option<String>
+    // package_identity_name: Option<String>
+    // publisher_certificate_name: Option<String>
+    // publisher_id: String
+    // xbox_live_tier: Value
+    // xbox_xpa: Value = Field(alias="XboxXPA")
+    // xbox_cross_gen_set_id: Value
+    // xbox_console_gen_optimized: Value
+    // xbox_console_gen_compatible: Value
+    // xbox_live_gold_required: Option<bool>
+    // ownership_type: Value
+    // pdp_background_color: Option<String>
+    // has_add_ons: Option<bool>
+    // revision_id: String
+    // product_group_id: Option<String>
+    // product_group_name: Option<String>
     
 
     attributes: Value,
-    can_install_to_SD_card: Value, 
+    can_install_to_s_d_card: Value, 
     category: Value,
-    sub_category: Value,
+    //sub_category: Value,
     categories: Value,
-    extensions: Value,
+    extensions: Option<Value>,
     is_accessible: Value,
     is_line_of_business_app: Value,
     is_published_to_legacy_windows_phone_store: Value,
     is_published_to_legacy_windows_store: Value,
-    is_settings_app: Value,
+    //is_settings_app: Value,
     package_family_name: Value,
     package_identity_name: Value,
     publisher_certificate_name: Value,
@@ -252,11 +247,17 @@ pub struct ValidationData{
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct DisplaySkuAvailability{
-    // sku: Optional[Sku]
-    // availabilities: List[Availability]
+    // sku: Option<Sku>
+    // availabilities: Vec<Availability>
 
     sku: Value, 
     availabilities: Value, 
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct AlternateId{
+    id_type: String,
+    value: String,
+}
 

@@ -3,6 +3,7 @@ pub mod game{
     use reqwest::StatusCode;
     use reqwest::Url;
     use crate::client::catalog_response;
+    use std::fs;
     pub async fn send_request(ids: Vec<String>)-> Result<(), Box<dyn std::error::Error>> {
         let client = reqwest::Client::new();
         let ids : String = ids.join(",");
@@ -31,4 +32,37 @@ pub mod game{
         }
         Ok(())
     }
+
+    pub fn read_from_file(){
+        let contents = fs::read_to_string("./input")
+            .expect("Something went wrong reading the file");
+        let v: catalog_response::Response = serde_json::from_str(&contents).unwrap();
+        for product in v.products.iter(){
+            println!("product id {}", product.product_id);
+            for localized_properties in product.localized_properties.iter(){
+            
+                if let  Some(name) = &localized_properties.developer_name{
+                    println!("{} Made by {}",localized_properties.product_title,name)
+                }
+                for image in localized_properties.images.iter(){
+                    if image.image_purpose == "Poster" {
+                        let uri = String::from("http:") + &image.uri;
+                        println!("visit this uri for poster: {}", uri)
+                    }
+                }
+
+            }
+            if let Some(product_a_schema) = &product.product_a_schema{
+                println!("{}",product_a_schema)
+            }
+            if let Some(product_b_schema) = &product.product_b_schema{
+                println!("{}",product_b_schema)
+            }
+
+            
+        }
+        
+        
+    }
+
 }
