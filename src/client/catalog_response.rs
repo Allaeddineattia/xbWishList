@@ -31,15 +31,18 @@ mod my_date_format {
     //
     // although it may also be generic over the input types T.
     pub fn serialize<S>(
-        date: &DateTime<Utc>,
+        date: &Option<DateTime<Utc>>,
         serializer: S,
     ) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         println!("Serialize");
-        let s = format!("{}", date.format(FORMAT));
-        serializer.serialize_str(&s)
+        if let Some(date) = date{
+            let s = format!("{}", date.format(FORMAT));
+            return serializer.serialize_str(&s);
+        }
+        serializer.serialize_str("")
     }
 
     // The signature of a deserialize_with function must follow the pattern:
@@ -51,16 +54,17 @@ mod my_date_format {
     // although it may also be generic over the output types T.
     pub fn deserialize<'de, D>(
         deserializer: D,
-    ) -> Result<DateTime<Utc>, D::Error>
+    ) -> Result<Option<DateTime<Utc>>, D::Error>
     where
         D: Deserializer<'de>,
     {
         println!("deserialize");
         let s = String::deserialize(deserializer)?;
         println!("{}",s);
-        let t = DateTime::parse_from_rfc3339(&s).unwrap();
-        let ti: DateTime<Utc> = t.with_timezone(&Utc);
-        Ok(ti)
+        match DateTime::parse_from_rfc3339(&s){
+            Ok(time) => Ok(Some(time.with_timezone(&Utc))),
+            Err(err) => Ok(None),
+        }    
     }
 }
 
@@ -69,7 +73,7 @@ mod my_date_format {
 pub struct Product{
 
     #[serde(with = "my_date_format")]
-    pub last_modified_date: DateTime<Utc>,
+    pub last_modified_date: Option<DateTime<Utc>>,
     pub localized_properties: Vec<LocalizedProperty>,
     pub market_properties: Vec<MarketProperty>,
     pub product_a_schema: Option<String>,
@@ -102,40 +106,21 @@ pub struct LocalizedProperty{
     pub eligibility_properties: Option<Value>,// need some work
     pub franchises: Option<Vec<Value>>,
     pub images: Vec<Image>,
-    // videos: Option<Vec<Video>>
-    // product_description: Option<String>
+    pub videos: Option<Vec<Video>>,
+    product_description: Option<String>,
     pub product_title: String,
-    // short_title: Option<String>
-    // sort_title: Option<String>
-    // friendly_title: Option<String>
-    // short_description: Option<String>
-    // search_titles: Option<Vec<SearchTitle>>
-    // voice_title: Option<String>
-    // render_group_details: Option<Value>
-    // product_display_ranks: Option<Vec>
-    // interactive_model_config: Option<Value>
-    // interactive_3d_enabled: Option<bool> = Field(alias="interactive3DEnabled")
-    // language: Option<String>
-    // markets: Option<Vec<String>>
-
-
-
-    //images: Value, 
-    videos: Value, 
-    product_description: Value, 
-    short_title: Value, 
-    sort_title: Value, 
-    friendly_title: Value, 
-    short_description: Value, 
-    search_titles: Value, 
-    voice_title: Value, 
-    render_group_details: Value, 
-    product_display_ranks: Value, 
-    interactive_model_config: Value, 
-    interactive_3_d_enabled: Value,  
-    language: Value, 
-    markets: Value, 
-
+    short_title: Option<String>,
+    sort_title: Option<String>,
+    friendly_title: Option<String>,
+    short_description: Option<String>,
+    search_titles: Option<Vec<SearchTitle>>,
+    voice_title: Option<String>,
+    render_group_details: Option<Value>,
+    product_display_ranks: Option<Vec<Value>>,
+    interactive_model_config: Option<Value>,
+    interactive_3_d_enabled: Option<bool>,
+    language: Option<String>,
+    markets: Option<Vec<String>>,
     
 }
 
@@ -155,27 +140,70 @@ pub struct Image {
     pub uri: String,
     pub width: i32,
 }
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct Video {
+    pub uri: String,
+    pub video_purpose: String,
+    height: i32,
+    width: i32,
+    audio_encoding: String,
+    video_encoding: String,
+    video_position_info: String,
+    caption: String,
+    file_size_in_bytes: i32,
+    pub preview_image: Image,
+    sort_order: i32,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct SearchTitle{
+    search_title_string: String,
+    search_title_type: String,
+}
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct MarketProperty{
-    // original_release_date: Option<datetime>
+    #[serde(with = "my_date_format")]
+    original_release_date: Option<DateTime<Utc>>,
     original_release_friendly_name: Option<String>,
-    // minimum_user_age: Option<i32>
-    // content_ratings: Option<Vec<ContentRating>>
-    // related_products: Option<Vec>
-    // usage_data: Vec<UsageData>
-    // bundle_config: Option<Value>
-    // markets: Option<Vec<String>>
-
-    original_release_date: Value,  
-    minimum_user_age: Value, 
-    content_ratings: Value, 
-    related_products: Value, 
-    usage_data: Value, 
-    bundle_config: Value, 
-    markets: Value, 
+    minimum_user_age: Option<i32>,
+    content_ratings: Option<Vec<ContentRating>>,
+    related_products: Option<Vec<RelatedProducts>>,
+    usage_data: Vec<UsageData>,
+    bundle_config: Option<Value>,
+    markets: Option<Vec<String>>,
+ 
 }
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct ContentRating{
+    rating_system: String,
+    rating_id: String,
+    rating_descriptors: Vec<String>,
+    rating_disclaimers: Vec<Value>,
+    interactive_elements: Option<Vec<Value>>,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct RelatedProducts{
+    related_product_id: String,
+    relationship_type: String,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct UsageData{
+    aggregate_time_span: String,
+    average_rating: f32,
+    play_count: Option<i8>,
+    rating_count: i8,
+    rental_count: Option<String>,
+    trial_count: Option<String>,
+    purchase_count: Option<String>,
+}
+
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]

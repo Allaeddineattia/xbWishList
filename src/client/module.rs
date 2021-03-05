@@ -50,6 +50,14 @@ pub mod game{
                         println!("visit this uri for poster: {}", uri)
                     }
                 }
+                if let Some(videos) = &localized_properties.videos{
+                    for video in videos.iter(){
+                        if video.video_purpose == "trailer"{
+                            let uri = &video.uri;
+                            println!("visit this uri for video trailer xml file: {}", uri)
+                        }
+                    }
+                }
 
             }
             if let Some(product_a_schema) = &product.product_a_schema{
