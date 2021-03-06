@@ -5,8 +5,8 @@ use super::availability::Availability;
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct DisplaySkuAvailability{
-    sku: Option<Sku>,
-    availabilities: Vec<Availability>,
+    pub sku: Option<Sku>,
+    pub availabilities: Vec<Availability>,
 
 
 }

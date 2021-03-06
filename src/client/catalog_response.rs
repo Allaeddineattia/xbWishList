@@ -49,7 +49,7 @@ pub struct Product{
     product_family: String,
     schema_version: Option<String>,
     product_kind: String,
-    display_sku_availabilities: Vec<DisplaySkuAvailability>,
+    pub display_sku_availabilities: Vec<DisplaySkuAvailability>,
 }
 
 

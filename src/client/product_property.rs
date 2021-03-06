@@ -19,7 +19,7 @@ pub struct ProductProperties{
     package_identity_name: Option<String>,
     publisher_certificate_name: Option<String>,
     publisher_id: String,
-    xbox_live_tier: String,
+    xbox_live_tier: Option<String>,
     xbox_x_p_a: Value,
     xbox_cross_gen_set_id: Value,
     xbox_console_gen_optimized: Vec<String>,

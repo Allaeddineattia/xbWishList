@@ -28,7 +28,7 @@ pub struct SkuLocalizedProperty{
     minimum_notes: Option<String>,
     recommended_notes: Option<String>,
     release_notes: Option<String>,
-    display_platform_properties: Value,
+    display_platform_properties: Option<Value>,
     sku_description: String,
     sku_title: String,
     sku_button_title: Option<String>,
@@ -60,7 +60,7 @@ pub struct SkuMarketProperty{
     #[serde(with = "my_date_format")]
     first_available_date: Option<DateTime<Utc>>,
     supported_languages: Option<Vec<String>>,
-    package_ids: Value,
+    package_ids: Option<Value>,
     pi_filter: Option<Value> ,
     markets: Vec<String>,
 }
