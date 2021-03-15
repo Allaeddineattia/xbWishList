@@ -7,6 +7,7 @@ pub struct Result{
     pub on_sale: bool,
     pub on_deals_with_gold: bool,
     pub poster_uri: String,
+    pub store_uri: String,
 }
 
 impl Result{
@@ -61,14 +62,18 @@ impl Result{
             }
 
         }
+
+        let store_uri = String::from("https://www.microsoft.com/") + "en-us" + "/p/" +
+            &name.trim().replace(" ", "-").replace(":", "").to_lowercase() + "/" + &product.product_id;
         
         Result{
             id: product.product_id.clone(),
-            name: name,
+            name,
             publisher: developper_name,
             on_deals_with_gold: false,
             on_sale: false,
-            poster_uri: poster_uri,
+            poster_uri,
+            store_uri,
         }
     }
 
@@ -79,6 +84,6 @@ impl Result{
         println!("  name:             {}", self.name);
         println!("  publisher_name:   {}", self.publisher);
         println!("  poster_uri:       {}", self.poster_uri);
-        
+        println!("  store_uri:        {}", self.store_uri);
     }
 }
