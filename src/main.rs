@@ -1,26 +1,41 @@
-
-use std::env;
 mod client;
-pub use client::module::game;
+mod core;
+mod repo;
+pub use crate::core::service;
+
 use tokio::task;
+use mongodb::{Client, options::ClientOptions};
+
+async fn init_db() -> anyhow::Result<mongodb::Client>{
+    let mut client_options = ClientOptions::parse("mongodb://localhost:27017").await?;
+    client_options.app_name = Some("XbWishList".to_string());
+    Ok(Client::with_options(client_options)?)
+}
 
 
 async fn send_req() -> Result<(), Box<dyn std::error::Error>>{
-    let task1 = task::spawn(game::send_request(vec![String::from("9MZ11KT5KLP6")]));
-    let task2 = task::spawn(game::send_request(vec![String::from("9PH339L3Z99C")]));
-
+    let init_db_task = task::spawn(init_db());
+    let task1 = task::spawn(client::service::microsoft_api::get_games(vec![String::from("9nn50lxzt18z"),String::from("9phkxb8rdkbc")]));
+    let task2 = task::spawn(client::service::microsoft_api::get_games(vec![String::from("9n2zdn7nwqkv"),String::from("9ph339l3z99c")]));// nier: bppzvt8bz15n //9PH339L3Z99C / fifa 9nn50lxzt18z / starwars c2csdtscbz0c
+    let client = init_db_task.await??;
+    let db = client.database("xbWishlist");
     let resp1 = task1.await??;
     let resp2 = task2.await??;
-    game::get_info_from_response(&resp1);
-    game::get_info_from_response(&resp2);
+    
+    core::service::get_info_from_response(&resp1,&db).await?;
+    core::service::get_info_from_response(&resp2,&db).await?;
     Ok(())
 }
 
 
 fn main() {
     //let ids : Vec<String> = env::args().collect();// String::from("9MZ11KT5KLP6"),String::from("9PH339L3Z99C")
-    let mut rt = tokio::runtime::Runtime::new().unwrap();
-    rt.block_on(send_req());
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    match rt.block_on(send_req()){
+        Ok(_) => {},
+        Err(_) =>{},
+    };
+    
     //let result = game::send_request(ids).await?;
     //game::get_info_from_response(&result);
     //game::read_from_file();

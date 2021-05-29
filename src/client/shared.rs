@@ -1,5 +1,5 @@
 pub mod my_date_format {
-    use chrono::{DateTime, Utc, TimeZone};
+    use chrono::{DateTime, Utc};
     use serde::{self, Deserialize, Serializer, Deserializer};
 
     const FORMAT: &'static str = "%Y-%m-%d %H:%M:%S";
@@ -42,7 +42,7 @@ pub mod my_date_format {
         if let Ok(s) = String::deserialize(deserializer) {
             match DateTime::parse_from_rfc3339(&s){
             Ok(time) => Ok(Some(time.with_timezone(&Utc))),
-            Err(err) => Ok(None),
+            Err(_) => Ok(None),
             }  
         }else{
             Ok(None)
