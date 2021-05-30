@@ -1,6 +1,6 @@
 use crate::client::input_dto::catalog_response;
 use super::purchase_option;
-
+/*
 mod remediaition_values{
     pub const XBOX_GAME_PASS: &str      = "9SJCZDHW896G";
     pub const PC_GAME_PASS: &str        = "9SQ1C79LQTJJ";
@@ -16,7 +16,7 @@ mod affirmation_values{
     pub const XBOX_LIVE_GOLD: &str = "9RVBF5P99P15";
 }
 
-
+*/
 
 
 

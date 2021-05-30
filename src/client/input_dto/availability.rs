@@ -83,8 +83,8 @@ pub struct PIFilter{
 pub struct Price{
     pub currency_code: String,
     pub is_p_i_required: bool,
-    pub list_price: f32,
-    pub m_s_r_p: f32,
+    pub list_price: f64,
+    pub m_s_r_p: f64,
     pub tax_type: String,
     pub wholesale_currency_code: String,
 

@@ -21,8 +21,8 @@ pub enum SaleState{
 
 pub struct PurchaseAvailibility{
     pub sale_state: SaleState,
-    pub original_price : f32,
-    pub sale_price : f32,
+    pub original_price : f64,
+    pub sale_price : f64,
     pub discount_ratio : u8,
     pub currency: String,
     pub start_date: DateTime<Utc>,
@@ -31,9 +31,23 @@ pub struct PurchaseAvailibility{
 
 impl PurchaseAvailibility{
 
-    fn get_sale_ratio(new_price:f32, old_price:f32) -> u8{
+    fn get_sale_ratio(new_price:f64, old_price:f64) -> u8{
         let ratio = (new_price * 100.0 / old_price).round() as u8;
         return 100 - ratio;
+    }
+
+    pub fn get_sale_state(sale_state: &str) -> SaleState{
+
+        match sale_state {
+            "PublicSale" => SaleState::PublicSale,
+            "DealsWithGold" => SaleState::DealsWithGold,
+            "DealsWithXboxGP" => SaleState::DealsWithXboxGP,
+            "DealsWithPcGP" => SaleState::DealsWithPcGP,
+            "DealsWithGPUltimate" => SaleState::DealsWithGPUltimate,
+            "DealsWithEAPlay" => SaleState::DealsWithEAPlay,
+            "NotOnSale" => SaleState::NotOnSale, 
+            _ => panic!(),
+        }
     }
 
     pub fn print(&self){

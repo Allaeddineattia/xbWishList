@@ -3,7 +3,6 @@ pub mod microsoft_api{
     use reqwest::StatusCode;
     use reqwest::Url;
     use crate::client::input_dto::catalog_response;
-    use std::fs;
     use anyhow::Result;
     use anyhow::anyhow;
     pub async fn get_games(ids: Vec<String>)-> Result<catalog_response::Response> {
