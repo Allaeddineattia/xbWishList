@@ -1,5 +1,6 @@
 use crate::client::input_dto::catalog_response;
 use super::purchase_option;
+use crate::core::purchase_option::{PurchaseAvailability, PurchaseOption};
 /*
 mod remediaition_values{
     pub const XBOX_GAME_PASS: &str      = "9SJCZDHW896G";
@@ -27,67 +28,19 @@ pub struct Game{
     pub id: String,
     pub name: String,
     pub publisher: String,
-    pub purchase_options: Vec<purchase_option::PurchaseAvailibility>,
+    pub developer: String,
+    pub purchase_options: Vec<PurchaseOption>,
     pub poster_uri: String,
     pub store_uri: String,
 }
 
 impl Game{
 
-    fn print_price(&self){
-        println!("_______Purchase__Options________");
-        for option in &self.purchase_options {
-            option.print();
-        }
+    pub fn new(id: String, name: String, publisher: String, developer: String,
+               purchase_options: Vec<PurchaseOption>, poster_uri: String, store_uri: String) -> Self {
+        Game { id, name, publisher, developer, purchase_options, poster_uri, store_uri }
     }
 
-
-
-    fn get_sales(product: &catalog_response::Product) -> Vec<purchase_option::PurchaseAvailibility>{
-        let mut sales: Vec<purchase_option::PurchaseAvailibility> = vec![]; 
-        for sku_availability in product.display_sku_availabilities.iter()
-        {
-            for availability in sku_availability.availabilities.iter()
-            {
-                if availability.actions.iter().find(|&x| x == "Purchase") != None 
-                {
-                    sales.push(purchase_option::PurchaseAvailibility::new(availability));
-                }
-            }
-        }
-        sales
-    }
-
-    pub fn new(product: &catalog_response::Product) -> Game{
-        let mut name = String::from("null");
-        let mut developper_name = String::from("null");
-        let mut poster_uri = String::from("null");
-        for localized_properties in product.localized_properties.iter(){
-            name = localized_properties.product_title.clone();
-            if let  Some(develop_name) = &localized_properties.developer_name{
-                developper_name = develop_name.clone();
-            }
-            for image in localized_properties.images.iter(){
-                if image.image_purpose == "Poster" {
-                    let uri = String::from("http:") + &image.uri;
-                    poster_uri = uri;
-                }
-            }
-
-        }
-
-        let store_uri = String::from("https://www.microsoft.com/") + "en-us" + "/p/" +
-            &name.trim().replace(" ", "-").replace(":", "").replace("|", "").replace("&", "").to_lowercase() + "/" + &product.product_id;
-        
-        Game{
-            id: product.product_id.clone(),
-            name,
-            publisher: developper_name,
-            purchase_options: Game::get_sales(product),
-            poster_uri,
-            store_uri,
-        }
-    }
 
     
     pub fn print(&self){
@@ -95,11 +48,13 @@ impl Game{
         println!("  id:               {}", self.id);
         println!("  name:             {}", self.name);
         println!("  publisher_name:   {}", self.publisher);
+        println!("  developer_name:   {}", self.developer);
         println!("  poster_uri:       {}", self.poster_uri);
         println!("  store_uri:        {}", self.store_uri);
         Game::print_price(self);
     }
 
-    
+
+
 }
 

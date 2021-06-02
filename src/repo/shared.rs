@@ -11,12 +11,11 @@ pub trait MongoEntity{
 #[async_trait]
 pub trait Repo{
     fn get_data_base_collection(&self) -> & Collection;
-
     fn get_collection_name(&self) -> & str;
     async fn  save_doc(&self, doc: Document){
         let data_base_collection = self.get_data_base_collection();
-        let isertion_result = data_base_collection.insert_one(doc.clone(), None).await;
-        match isertion_result{
+        let insertion_result = data_base_collection.insert_one(doc.clone(), None).await;
+        match insertion_result {
             Ok(result) => {
                 match result.inserted_id {
                     Bson::ObjectId(id) =>{

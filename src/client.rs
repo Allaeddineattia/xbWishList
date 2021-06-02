@@ -1,3 +1,3 @@
-pub mod service; 
+pub mod client_service;
 pub mod input_dto;
 pub mod shared;

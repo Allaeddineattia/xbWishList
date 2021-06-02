@@ -1,6 +1,6 @@
 use crate::client::input_dto::availability;
 use chrono::{DateTime, Utc, NaiveDateTime};
-mod remediaition_values{
+mod remediation_values {
     pub const XBOX_GAME_PASS: &str      = "9SJCZDHW896G";
     pub const PC_GAME_PASS: &str        = "9SQ1C79LQTJJ";
     pub const GAME_PASS_ULTIMATE: &str  = "9Q2FPGL45CQN";
@@ -19,7 +19,28 @@ pub enum SaleState{
     NotOnSale,
 }
 
-pub struct PurchaseAvailibility{
+pub struct PurchaseOption{
+    pub market: String,
+    pub purchase_options: Vec<PurchaseAvailability>,
+}
+
+impl PurchaseOption{
+
+
+    pub fn print(&self){
+        println!("_______Purchase__Options________");
+        println!("Market {}", self.market);
+        for option in &self.purchase_options {
+            option.print();
+        }
+
+    }
+    pub fn new(market: &str, purchase_options: Vec<PurchaseAvailability>) -> Self {
+        PurchaseOption { market: String::from(market), purchase_options }
+    }
+}
+
+pub struct PurchaseAvailability {
     pub sale_state: SaleState,
     pub original_price : f64,
     pub sale_price : f64,
@@ -29,7 +50,7 @@ pub struct PurchaseAvailibility{
     pub end_date: DateTime<Utc>,
 }
 
-impl PurchaseAvailibility{
+impl PurchaseAvailability {
 
     fn get_sale_ratio(new_price:f64, old_price:f64) -> u8{
         let ratio = (new_price * 100.0 / old_price).round() as u8;
@@ -37,7 +58,6 @@ impl PurchaseAvailibility{
     }
 
     pub fn get_sale_state(sale_state: &str) -> SaleState{
-
         match sale_state {
             "PublicSale" => SaleState::PublicSale,
             "DealsWithGold" => SaleState::DealsWithGold,
@@ -74,7 +94,7 @@ impl PurchaseAvailibility{
                 print!("***DealsWithGPUltimate***");
             },
         }
-        println!("sale_ratio <{}%>, orginal_price <{}>, sale_price<{} {}>, end_date<{}>", self.discount_ratio, self.original_price, self.sale_price, self.currency, self.end_date);
+        println!("sale_ratio <{}%>, original_price <{}>, sale_price<{} {}>, end_date<{}>", self.discount_ratio, self.original_price, self.sale_price, self.currency, self.end_date);
     }
 
     pub fn sale_state_string(&self) -> String{
@@ -103,8 +123,8 @@ impl PurchaseAvailibility{
         }
     }
 
-    pub fn new(availability: &availability::Availability) -> PurchaseAvailibility{
-        let mut result = PurchaseAvailibility{
+    pub fn new(availability: &availability::Availability) -> PurchaseAvailability {
+        let mut result = PurchaseAvailability {
             sale_state : SaleState::NotOnSale,
             original_price : 0.0,
             sale_price : 0.0,
@@ -122,9 +142,10 @@ impl PurchaseAvailibility{
         if let Some(order_managment) = &availability.order_management_data{
             let price = order_managment.price.list_price;
             let original_price = order_managment.price.m_s_r_p;
+            let currency = order_managment.price.currency_code.clone();
             result.original_price = original_price;
             result.sale_price = price;
-            result.discount_ratio = PurchaseAvailibility::get_sale_ratio(price, original_price);
+            result.discount_ratio = PurchaseAvailability::get_sale_ratio(price, original_price);
             if price < original_price 
             {
                 if let Some(remediation_required) = availability.remediation_required
@@ -133,19 +154,19 @@ impl PurchaseAvailibility{
                         if let Some(remediations) = &availability.remediations {
                             for remediation in remediations.iter() {
                                 match remediation.remediation_id.as_str() {
-                                    remediaition_values::XBOX_GAME_PASS  => {
+                                    remediation_values::XBOX_GAME_PASS  => {
                                         result.sale_state = SaleState::DealsWithXboxGP;
                                     },
-                                    remediaition_values::XBOX_LIVE_GOLD => {
+                                    remediation_values::XBOX_LIVE_GOLD => {
                                         result.sale_state = SaleState::DealsWithGold;
                                     },
-                                    remediaition_values::EA_PLAY => {
+                                    remediation_values::EA_PLAY => {
                                         result.sale_state = SaleState::DealsWithEAPlay;
                                     },
-                                    remediaition_values::GAME_PASS_ULTIMATE =>{
+                                    remediation_values::GAME_PASS_ULTIMATE =>{
                                         result.sale_state = SaleState::DealsWithGPUltimate;
                                     },
-                                    remediaition_values::PC_GAME_PASS  => {
+                                    remediation_values::PC_GAME_PASS  => {
                                         result.sale_state = SaleState::DealsWithPcGP;
                                     },
                                     _ => {},
@@ -167,10 +188,10 @@ mod tests{
     use super::*;
     #[test]
     fn test_sale_ratio(){
-        assert_eq!(67, PurchaseAvailibility::get_sale_ratio(19.79, 60.0));
-        assert_eq!(75, PurchaseAvailibility::get_sale_ratio(57.48, 229.95));
-        assert_eq!(20, PurchaseAvailibility::get_sale_ratio(6.39, 7.99));
-        assert_eq!(0, PurchaseAvailibility::get_sale_ratio(7.99, 7.99));
-        assert_eq!(100, PurchaseAvailibility::get_sale_ratio(0.0, 7.99));
+        assert_eq!(67, PurchaseAvailability::get_sale_ratio(19.79, 60.0));
+        assert_eq!(75, PurchaseAvailability::get_sale_ratio(57.48, 229.95));
+        assert_eq!(20, PurchaseAvailability::get_sale_ratio(6.39, 7.99));
+        assert_eq!(0, PurchaseAvailability::get_sale_ratio(7.99, 7.99));
+        assert_eq!(100, PurchaseAvailability::get_sale_ratio(0.0, 7.99));
     }
 }

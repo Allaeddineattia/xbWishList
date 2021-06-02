@@ -26,8 +26,8 @@ pub struct LocalizedProperty{
     product_display_ranks: Option<Vec<Value>>,
     interactive_model_config: Option<Value>,
     interactive_3_d_enabled: Option<bool>,
-    language: Option<String>,
-    markets: Option<Vec<String>>,
+    pub language: Option<String>,
+    pub markets: Option<Vec<String>>,
     
 }
 

@@ -1,12 +1,12 @@
-use crate::core::purchase_option::PurchaseAvailibility;
+use crate::core::purchase_option::PurchaseAvailability;
 use mongodb::bson::{doc,Document};
 use super::shared::MongoEntity;
 use chrono::{DateTime, Utc};
 
-impl MongoEntity for PurchaseAvailibility{
+impl MongoEntity for PurchaseAvailability {
     fn to_document(&self) -> Document{
 
-        let d = doc!{
+        doc!{
             "sale_state" : self.sale_state_string(),
             "original_price" : self.original_price,
             "sale_price" : self.sale_price,
@@ -14,8 +14,8 @@ impl MongoEntity for PurchaseAvailibility{
             "currency": &(self.currency),
             "start_date": self.start_date,
             "end_date": self.end_date,
-        };
-        d
+        }
+
     }
 
     
@@ -27,7 +27,7 @@ impl MongoEntity for PurchaseAvailibility{
         let currency: String = String::from(doc.get_str("currency").unwrap());
         let start_date: DateTime::<Utc> = *doc.get_datetime("start_date").unwrap();
         let end_date: DateTime::<Utc> = *doc.get_datetime("end_date").unwrap();
-        PurchaseAvailibility{
+        PurchaseAvailability {
             sale_state,
             original_price,
             sale_price,

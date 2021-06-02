@@ -1,10 +1,11 @@
 mod client;
 mod core;
 mod repo;
-pub use crate::core::service;
+mod service;
 
 use tokio::task;
 use mongodb::{Client, options::ClientOptions};
+use std::rc::Rc;
 
 async fn init_db() -> anyhow::Result<mongodb::Client>{
     let mut client_options = ClientOptions::parse("mongodb://localhost:27017").await?;
@@ -15,15 +16,22 @@ async fn init_db() -> anyhow::Result<mongodb::Client>{
 
 async fn send_req() -> Result<(), Box<dyn std::error::Error>>{
     let init_db_task = task::spawn(init_db());
-    let task1 = task::spawn(client::service::microsoft_api::get_games(vec![String::from("9nn50lxzt18z"),String::from("9phkxb8rdkbc")]));
-    let task2 = task::spawn(client::service::microsoft_api::get_games(vec![String::from("9n2zdn7nwqkv"),String::from("9ph339l3z99c")]));// nier: bppzvt8bz15n //9PH339L3Z99C / fifa 9nn50lxzt18z / starwars c2csdtscbz0c
+    let language = client::client_service::microsoft_api::XboxLiveLanguage::brazil();
+    let task1 = task::spawn(
+        client::client_service::microsoft_api::get_games(vec![String::from("9nn50lxzt18z"), String::from("9phkxb8rdkbc")],
+                                                         language));
+    let language = client::client_service::microsoft_api::XboxLiveLanguage::brazil();
+    let task2 = task::spawn(
+        client::client_service::microsoft_api::get_games(vec![String::from("9n2zdn7nwqkv"), String::from("9ph339l3z99c")],
+                                                         language));// nier: bppzvt8bz15n //9PH339L3Z99C / fifa 9nn50lxzt18z / starwars c2csdtscbz0c
     let client = init_db_task.await??;
-    let db = client.database("xbWishlist");
+    let db = Rc::new(client.database("xbWishlist"));
+    let game_service = service::game_service::GameService::new(db.clone());
     let resp1 = task1.await??;
     let resp2 = task2.await??;
     
-    core::service::get_info_from_response(&resp1,&db).await?;
-    core::service::get_info_from_response(&resp2,&db).await?;
+    game_service.get_info_from_response(&resp1).await?;
+    game_service.get_info_from_response(&resp2).await?;
     Ok(())
 }
 
