@@ -1,18 +1,24 @@
 use crate::core::game::Game;
 use crate::repo::shared::MongoEntity;
 use super::shared;
-use crate::core::purchase_option::{PurchaseAvailability, PurchaseOption};
+use crate::core::purchase_option::{PurchaseAvailability};
 use mongodb::bson::{doc,Document, Bson};
 use mongodb::{Collection, Database};
+use std::collections::HashMap;
 
 impl MongoEntity for Game {
     fn to_document(&self) -> Document{
-        let vec: Vec<Document> = vec![];
-        //     = (&self.purchase_options).into_iter().map(
-        //     |option| {
-        //         //option.to_document()
-        //     }
-        // ).collect();
+        let vec: Vec<Document> = (&self.purchase_options).into_iter().map(
+             |option_by_market| {
+                 let options: Vec<Document> = option_by_market.1.iter().map(|option|{
+                     option.to_document()
+                 }).collect();
+                 doc! {
+                     "market": option_by_market.0,
+                     "options": options,
+                 }
+             }
+         ).collect();
 
         doc!{
             "id" : &self.id,
@@ -33,15 +39,22 @@ impl MongoEntity for Game {
         let developer = String::from(doc.get_str("developer").unwrap());
         let poster_uri = String::from(doc.get_str("poster_uri").unwrap());
         let store_uri = String::from(doc.get_str("store_uri").unwrap());
-        let purchase_options: Vec<PurchaseOption> = vec![];
-        // = doc.get_array("purchase_options").unwrap()
-        //                     .into_iter().map(|bson| {
-        //                         if let Bson::Document(document) = bson{
-        //                             PurchaseAvailability::create_from_document(document)
-        //                         }else{
-        //                             panic!();
-        //                         }
-        //                     }).collect();
+        let mut purchase_options: HashMap<String, Vec<PurchaseAvailability>> = HashMap::new();
+        if let Ok(purchase_options_bson) = doc.get_array("purchase_options"){
+            for bson in purchase_options_bson{
+                let bson = bson.as_document().unwrap();
+                let market = String::from(bson.get_str("market").unwrap());
+                let purchase_option = bson.get_array("options").unwrap().iter().map(
+                    |option|{
+                        let option = option.as_document().unwrap();
+                        PurchaseAvailability::create_from_document(option)
+                    }
+                ).collect();
+                purchase_options.insert(market, purchase_option);
+            }
+        }
+
+
         Game{
             id,
             name,
@@ -56,7 +69,7 @@ impl MongoEntity for Game {
 
 pub struct  GameRepo{
     data_base_collection : Collection,
-    collection_name : String ,
+    collection_name : String,
 
 }
 impl GameRepo{

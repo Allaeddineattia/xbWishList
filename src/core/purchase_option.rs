@@ -19,26 +19,6 @@ pub enum SaleState{
     NotOnSale,
 }
 
-pub struct PurchaseOption{
-    pub market: String,
-    pub purchase_options: Vec<PurchaseAvailability>,
-}
-
-impl PurchaseOption{
-
-
-    pub fn print(&self){
-        println!("_______Purchase__Options________");
-        println!("Market {}", self.market);
-        for option in &self.purchase_options {
-            option.print();
-        }
-
-    }
-    pub fn new(market: &str, purchase_options: Vec<PurchaseAvailability>) -> Self {
-        PurchaseOption { market: String::from(market), purchase_options }
-    }
-}
 
 pub struct PurchaseAvailability {
     pub sale_state: SaleState,
@@ -94,7 +74,8 @@ impl PurchaseAvailability {
                 print!("***DealsWithGPUltimate***");
             },
         }
-        println!("sale_ratio <{}%>, original_price <{}>, sale_price<{} {}>, end_date<{}>", self.discount_ratio, self.original_price, self.sale_price, self.currency, self.end_date);
+        println!("sale_ratio <{}%>, original_price <{}>, sale_price<{} {}>, end_date<{}>",
+                 self.discount_ratio, self.original_price, self.sale_price, self.currency, self.end_date);
     }
 
     pub fn sale_state_string(&self) -> String{
@@ -142,7 +123,7 @@ impl PurchaseAvailability {
         if let Some(order_managment) = &availability.order_management_data{
             let price = order_managment.price.list_price;
             let original_price = order_managment.price.m_s_r_p;
-            let currency = order_managment.price.currency_code.clone();
+            result.currency = order_managment.price.currency_code.clone();
             result.original_price = original_price;
             result.sale_price = price;
             result.discount_ratio = PurchaseAvailability::get_sale_ratio(price, original_price);

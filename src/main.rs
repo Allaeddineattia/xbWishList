@@ -26,12 +26,15 @@ async fn send_req() -> Result<(), Box<dyn std::error::Error>>{
                                                          language));// nier: bppzvt8bz15n //9PH339L3Z99C / fifa 9nn50lxzt18z / starwars c2csdtscbz0c
     let client = init_db_task.await??;
     let db = Rc::new(client.database("xbWishlist"));
-    let game_service = service::game_service::GameService::new(db.clone());
+
+    let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
+    let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
+
     let resp1 = task1.await??;
     let resp2 = task2.await??;
-    
-    game_service.get_info_from_response(&resp1).await?;
-    game_service.get_info_from_response(&resp2).await?;
+    let language = client::client_service::microsoft_api::XboxLiveLanguage::brazil();
+    game_service.get_info_from_response(&resp1, &language).await?;
+    game_service.get_info_from_response(&resp2, &language).await?;
     Ok(())
 }
 
