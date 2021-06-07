@@ -12,7 +12,7 @@ pub trait MongoEntity{
 pub trait Repo{
     fn get_data_base_collection(&self) -> & Collection;
     fn get_collection_name(&self) -> & str;
-    async fn  save_doc(&self, doc: Document){
+    async fn save_doc(&self, doc: Document){
         let data_base_collection = self.get_data_base_collection();
         let insertion_result = data_base_collection.insert_one(doc.clone(), None).await;
         match insertion_result {

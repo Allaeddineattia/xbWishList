@@ -82,6 +82,24 @@ impl GameRepo{
             collection_name
         }
     }
+
+    pub async fn save(&self, game: &Game){
+        let option = shared::Repo::get_document_by_id(self, &game.id).await;
+        if let Some(document) = option{
+            let res = self.data_base_collection.update_one(doc! {"id": &game.id}, game.to_document(), None).await;
+            let id = res.unwrap().upserted_id;
+            if let Some(bson) = id {
+                if let Bson::ObjectId(id) = bson{
+                    println!("element id \"{}\" updated into collection \"{}\" with object id \"{}\"",
+                             &game.id, shared::Repo::get_collection_name(self),id )
+                }
+            }
+            return;
+        }
+        let document = game.to_document();
+        shared::Repo::save_doc(self, document).await;
+    }
+
 }
 
 impl shared::Repo for GameRepo{

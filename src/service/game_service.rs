@@ -70,9 +70,7 @@ impl GameService{
              let result: game::Game = self.abstract_product_to_game(product, language);
             //result.print();
             let id = result.id.clone();
-
-            let doc = result.to_document();
-            self.game_repo.save_doc(doc).await;
+            self.game_repo.save(&result).await;
             let result = self.game_repo.get_document_by_id(&id).await;
             let result = result.unwrap();
             let result = game::Game::create_from_document(&result);
