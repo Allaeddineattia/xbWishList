@@ -14,7 +14,7 @@ pub struct LocalizedProperty{
     pub franchises: Option<Vec<Value>>,
     pub images: Vec<Image>,
     pub videos: Option<Vec<Video>>,
-    product_description: Option<String>,
+    pub product_description: Option<String>,
     pub product_title: String,
     short_title: Option<String>,
     sort_title: Option<String>,

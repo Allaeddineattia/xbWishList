@@ -21,6 +21,7 @@ pub enum SaleState{
 
 
 pub struct PurchaseAvailability {
+    pub id: String,
     pub sale_state: SaleState,
     pub original_price : f64,
     pub sale_price : f64,
@@ -106,6 +107,7 @@ impl PurchaseAvailability {
 
     pub fn new(availability: &availability::Availability) -> PurchaseAvailability {
         let mut result = PurchaseAvailability {
+            id: "".to_string(),
             sale_state : SaleState::NotOnSale,
             original_price : 0.0,
             sale_price : 0.0,
@@ -119,10 +121,14 @@ impl PurchaseAvailability {
             result.start_date = condition.start_date.unwrap();
             result.end_date = condition.end_date.unwrap();
         }
+        if let Some(id) = &availability.availability_id{
+            result.id = String::from(id);
+        }
 
         if let Some(order_managment) = &availability.order_management_data{
             let price = order_managment.price.list_price;
             let original_price = order_managment.price.m_s_r_p;
+
             result.currency = order_managment.price.currency_code.clone();
             result.original_price = original_price;
             result.sale_price = price;

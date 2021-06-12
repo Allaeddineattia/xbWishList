@@ -17,12 +17,11 @@ async fn init_db() -> anyhow::Result<mongodb::Client>{
 
 async fn send_req() -> Result<(), Box<dyn std::error::Error>>{
     let init_db_task = task::spawn(init_db());
-
-    let language = client::client_service::microsoft_api::XboxLiveLanguage::united_states();
+    let language = &client::client_service::microsoft_api::FRANCE;
     let task1 = task::spawn(
         MicrosoftApiService::get_games(vec![String::from("9nn50lxzt18z"), String::from("9phkxb8rdkbc")],
-                                        language));
-    let language = client::client_service::microsoft_api::XboxLiveLanguage::united_states();
+                                       language));
+
     let task2 = task::spawn(
         MicrosoftApiService::get_games(vec![String::from("9n2zdn7nwqkv"), String::from("9ph339l3z99c")],
                                         language));// nier: bppzvt8bz15n //9PH339L3Z99C / fifa 9nn50lxzt18z / starwars c2csdtscbz0c
@@ -35,7 +34,6 @@ async fn send_req() -> Result<(), Box<dyn std::error::Error>>{
 
     let resp1 = task1.await??;
     let resp2 = task2.await??;
-    let language = client::client_service::microsoft_api::XboxLiveLanguage::brazil();
     game_service.get_info_from_response(&resp1, &language).await?;
     game_service.get_info_from_response(&resp2, &language).await?;
 

@@ -22,14 +22,18 @@ impl GameService{
         GameService { db: db.clone(), purchase_option_service, game_repo:GameRepo::new(&*db) }
     }
 
-    fn abstract_product_to_game(&self, product: &catalog_response::Product, language: &XboxLiveLanguage) -> Game{
+    fn abstract_product_to_game(&self, product: &catalog_response::Product, language: &XboxLiveLanguage<'static>) -> Game{
         let mut name = String::from("null");
         let mut developer_name = String::from("null");
         let mut publisher_name = String::from("null");
         let mut poster_uri = String::from("null");
+        let mut description = String::from("null");
         let id = product.product_id.clone();
         for localized_properties in product.localized_properties.iter(){
             name = localized_properties.product_title.clone();
+            if let Some(desc) = &localized_properties.product_description{
+                description = desc.clone();
+            }
             if let Some(develop_name) = &localized_properties.developer_name {
                 developer_name = develop_name.clone();
             }
@@ -43,13 +47,13 @@ impl GameService{
                 }
             }
         }
-        let store_uri = String::from("https://www.microsoft.com/") + &language.local() + "/p/" +
+        let store_uri = String::from("https://www.microsoft.com/") + & language.local() + "/p/" +
             &name.trim().replace(" ", "-").replace(":", "")
                 .replace("|", "").replace("&", "").to_lowercase() + "/"
             + &product.product_id;
 
         let mut game = Game::new(id, name, publisher_name, developer_name,
-                                 poster_uri, store_uri);
+                                 poster_uri, store_uri, description);
 
         let sales = self.purchase_option_service.get_sales(product);
         game.add_purchase_option(&language.short_id(), sales);
@@ -57,23 +61,22 @@ impl GameService{
 
     }
 
-    pub fn abstract_result_to_games(&self, result: &catalog_response::Response, language: &XboxLiveLanguage) -> Vec<Game>{
+    pub fn abstract_result_to_games(&self, result: &catalog_response::Response, language: &XboxLiveLanguage<'static>) -> Vec<Game>{
         result.products.iter().map(|product|{
             self.abstract_product_to_game(product, language)
         }).collect()
     }
 
 
-    pub async fn get_info_from_response( &self, result: &catalog_response::Response, language: &XboxLiveLanguage) -> anyhow::Result<()>
+    pub async fn get_info_from_response( &self, result: &catalog_response::Response, language: &XboxLiveLanguage<'static>) -> anyhow::Result<()>
     {
         for product in result.products.iter(){
              let result: game::Game = self.abstract_product_to_game(product, language);
             //result.print();
             let id = result.id.clone();
             self.game_repo.save(&result).await;
-            let result = self.game_repo.get_document_by_id(&id).await;
+            let result = self.game_repo.fetch_element(&result).await;
             let result = result.unwrap();
-            let result = game::Game::create_from_document(&result);
             result.print();
             //     let id = result.id.clone();
         //

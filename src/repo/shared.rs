@@ -6,12 +6,35 @@ use async_trait::async_trait;
 pub trait MongoEntity{
     fn to_document(&self)-> Document;
     fn create_from_document(doc : &Document) -> Self;
+
+}
+
+pub trait UniqueEntity{
+    fn get_unique_selector(&self) -> Document;
 }
 
 #[async_trait]
-pub trait Repo{
+pub trait  Repo <T> where T: MongoEntity + UniqueEntity + Sync + Send{
     fn get_data_base_collection(&self) -> & Collection;
     fn get_collection_name(&self) -> & str;
+
+    async fn save(&self, entity: & T){
+        let option = self.fetch_element(entity).await;
+        if let Some(document) = option{
+            let res = self.get_data_base_collection().update_one(entity.get_unique_selector(), entity.to_document(), None).await;
+            let id = res.unwrap().upserted_id;
+            if let Some(bson) = id {
+                if let Bson::ObjectId(id) = bson{
+                    println!("element with selector \"{}\" updated into collection \"{}\" with object id \"{}\"",
+                             &entity.get_unique_selector(), self.get_collection_name(),id )
+                }
+            }
+        }
+        let document = entity.to_document();
+        self.save_doc( document).await;
+
+    }
+
     async fn save_doc(&self, doc: Document){
         let data_base_collection = self.get_data_base_collection();
         let insertion_result = data_base_collection.insert_one(doc.clone(), None).await;
@@ -30,14 +53,18 @@ pub trait Repo{
         }
     }
 
-    async fn get_document_by_id(&self, id: &str) -> Option<Document>{
+    async fn fetch_element(&self, element: &T) -> Option<T>{
+        let query = element.get_unique_selector();
         let data_base_collection = self.get_data_base_collection();
-        let query = doc! {
-            "id": id
-        };
         let query_result = data_base_collection.find_one(query,None).await;
+
         match query_result {
-            Ok(option) => option,
+            Ok(option) => {
+                if let Some(document) = option{
+                    return Some(T::create_from_document(&document))
+                }
+                None
+            },
             Err(_error) => None
         }
     }

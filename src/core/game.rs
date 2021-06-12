@@ -31,14 +31,17 @@ pub struct Game{
     pub publisher: String,
     pub developer: String,
     pub purchase_options: HashMap<String,Vec<PurchaseAvailability>>,
+    pub description: String,
     pub poster_uri: String,
     pub store_uri: String,
 }
 
 impl Game{
 
-    pub fn new(id: String, name: String, publisher: String, developer: String, poster_uri: String, store_uri: String) -> Self {
-        Game { id, name, publisher, developer, purchase_options: HashMap::new(), poster_uri, store_uri }
+    pub fn new(id: String, name: String, publisher: String, developer: String, poster_uri: String,
+               store_uri: String, description: String) -> Self {
+        Game { id, name, publisher, developer, purchase_options: HashMap::new(),
+            poster_uri, store_uri, description}
     }
 
 
@@ -55,6 +58,7 @@ impl Game{
         println!("  developer_name:   {}", self.developer);
         println!("  poster_uri:       {}", self.poster_uri);
         println!("  store_uri:        {}", self.store_uri);
+        println!("  description:        {}", self.description);
         self.print_price();
     }
 
@@ -63,7 +67,6 @@ impl Game{
 
         for option in &self.purchase_options {
             println!("Market {}", option.0);
-
             for purchase_option in option.1 {
                 purchase_option.print();
             }

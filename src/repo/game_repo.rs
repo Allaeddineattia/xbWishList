@@ -1,5 +1,5 @@
 use crate::core::game::Game;
-use crate::repo::shared::MongoEntity;
+use crate::repo::shared::{MongoEntity, UniqueEntity};
 use super::shared;
 use crate::core::purchase_option::{PurchaseAvailability};
 use mongodb::bson::{doc,Document, Bson};
@@ -27,6 +27,7 @@ impl MongoEntity for Game {
             "developer" : &self.developer,
             "poster_uri" : &self.poster_uri,
             "store_uri" : &self.store_uri,
+            "description" : &self.description,
             "purchase_options" : vec,
 
         }
@@ -39,6 +40,7 @@ impl MongoEntity for Game {
         let developer = String::from(doc.get_str("developer").unwrap());
         let poster_uri = String::from(doc.get_str("poster_uri").unwrap());
         let store_uri = String::from(doc.get_str("store_uri").unwrap());
+        let description = String::from(doc.get_str("description").unwrap());
         let mut purchase_options: HashMap<String, Vec<PurchaseAvailability>> = HashMap::new();
         if let Ok(purchase_options_bson) = doc.get_array("purchase_options"){
             for bson in purchase_options_bson{
@@ -63,8 +65,11 @@ impl MongoEntity for Game {
             purchase_options,
             poster_uri,
             store_uri,
+            description,
         }
     }
+
+
 }
 
 pub struct  GameRepo{
@@ -83,30 +88,38 @@ impl GameRepo{
         }
     }
 
-    pub async fn save(&self, game: &Game){
-        let option = shared::Repo::get_document_by_id(self, &game.id).await;
-        if let Some(document) = option{
-            let res = self.data_base_collection.update_one(doc! {"id": &game.id}, game.to_document(), None).await;
-            let id = res.unwrap().upserted_id;
-            if let Some(bson) = id {
-                if let Bson::ObjectId(id) = bson{
-                    println!("element id \"{}\" updated into collection \"{}\" with object id \"{}\"",
-                             &game.id, shared::Repo::get_collection_name(self),id )
-                }
-            }
-            return;
-        }
-        let document = game.to_document();
-        shared::Repo::save_doc(self, document).await;
-    }
+    // pub async fn save(&self, game: &Game){
+    //     let option = shared::Repo::get_document_by_id(self, &game.id).await;
+    //     if let Some(document) = option{
+    //         let res = self.data_base_collection.update_one(doc! {"id": &game.id}, game.to_document(), None).await;
+    //         let id = res.unwrap().upserted_id;
+    //         if let Some(bson) = id {
+    //             if let Bson::ObjectId(id) = bson{
+    //                 println!("element id \"{}\" updated into collection \"{}\" with object id \"{}\"",
+    //                          &game.id, shared::Repo::get_collection_name(self),id )
+    //             }
+    //         }
+    //         return;
+    //     }
+    //     let document = game.to_document();
+    //     shared::Repo::save_doc(self, document).await;
+    // }
 
 }
+impl UniqueEntity for Game{
+    fn get_unique_selector(&self) -> Document {
+        doc! {
+            "id": &self.id,
+        }
+    }
+}
 
-impl shared::Repo for GameRepo{
+impl shared::Repo<Game> for GameRepo{
     fn get_data_base_collection(&self) -> & Collection {
         & self.data_base_collection
     }
     fn get_collection_name(&self) -> & str{
         & self.collection_name
     }
+
 }
