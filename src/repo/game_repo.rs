@@ -20,7 +20,7 @@ impl MongoEntity for Game {
              }
          ).collect();
 
-        doc!{
+        let info = doc! {
             "id" : &self.id,
             "name" : &self.name,
             "publisher" : &self.publisher,
@@ -28,8 +28,11 @@ impl MongoEntity for Game {
             "poster_uri" : &self.poster_uri,
             "store_uri" : &self.store_uri,
             "description" : &self.description,
-            "purchase_options" : vec,
+        };
 
+        doc!{
+            
+            "purchase_options" : vec,
         }
     }
 
@@ -88,23 +91,6 @@ impl GameRepo{
         }
     }
 
-    // pub async fn save(&self, game: &Game){
-    //     let option = shared::Repo::get_document_by_id(self, &game.id).await;
-    //     if let Some(document) = option{
-    //         let res = self.data_base_collection.update_one(doc! {"id": &game.id}, game.to_document(), None).await;
-    //         let id = res.unwrap().upserted_id;
-    //         if let Some(bson) = id {
-    //             if let Bson::ObjectId(id) = bson{
-    //                 println!("element id \"{}\" updated into collection \"{}\" with object id \"{}\"",
-    //                          &game.id, shared::Repo::get_collection_name(self),id )
-    //             }
-    //         }
-    //         return;
-    //     }
-    //     let document = game.to_document();
-    //     shared::Repo::save_doc(self, document).await;
-    // }
-
 }
 impl UniqueEntity for Game{
     fn get_unique_selector(&self) -> Document {
@@ -121,5 +107,4 @@ impl shared::Repo<Game> for GameRepo{
     fn get_collection_name(&self) -> & str{
         & self.collection_name
     }
-
 }

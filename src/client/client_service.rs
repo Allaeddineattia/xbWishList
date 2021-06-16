@@ -99,15 +99,15 @@ pub mod microsoft_api{
             MicrosoftApiService{}
         }
 
-        pub async fn get_games(ids: Vec<String>, language: &XboxLiveLanguage<'static>)-> Result<catalog_response::Response> {
+        pub async fn get_games(ids: Vec<String>, language: & 'static str, market: & 'static str)-> Result<catalog_response::Response> {
             println!("getting games for {:#?}", ids);
 
             let client = reqwest::Client::new();
             let ids : String = ids.join(",");
             let url = Url::parse_with_params("https://displaycatalog.mp.microsoft.com/v7.0/products",
                                              &[
-                                                 ("languages", language.local()),
-                                                 ("market", language.short_id()),
+                                                 ("languages", language),
+                                                 ("market", market),
                                                  ("bigIds", &ids), //9MZ11KT5KLP6,9PH339L3Z99C
                                                  ("actionFilter","Browse"),
                                                  ("fieldsTemplate","details"),

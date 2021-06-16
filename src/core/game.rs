@@ -25,6 +25,7 @@ mod affirmation_values{
 
 
 
+
 pub struct Game{
     pub id: String,
     pub name: String,
@@ -34,14 +35,15 @@ pub struct Game{
     pub description: String,
     pub poster_uri: String,
     pub store_uri: String,
+    pub language: String,
 }
 
 impl Game{
 
     pub fn new(id: String, name: String, publisher: String, developer: String, poster_uri: String,
-               store_uri: String, description: String) -> Self {
+               store_uri: String, description: String, language: String) -> Self {
         Game { id, name, publisher, developer, purchase_options: HashMap::new(),
-            poster_uri, store_uri, description}
+            poster_uri, store_uri, description, language}
     }
 
 

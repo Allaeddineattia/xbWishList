@@ -19,7 +19,7 @@ pub trait  Repo <T> where T: MongoEntity + UniqueEntity + Sync + Send{
     fn get_collection_name(&self) -> & str;
 
     async fn save(&self, entity: & T){
-        let option = self.fetch_element(entity).await;
+        let option = self.fetch(entity).await;
         if let Some(document) = option{
             let res = self.get_data_base_collection().update_one(entity.get_unique_selector(), entity.to_document(), None).await;
             let id = res.unwrap().upserted_id;
@@ -42,7 +42,8 @@ pub trait  Repo <T> where T: MongoEntity + UniqueEntity + Sync + Send{
             Ok(result) => {
                 match result.inserted_id {
                     Bson::ObjectId(id) =>{
-                        println!("element id \"{}\" inserted into collection \"{}\" with object id \"{}\"", doc.get_str("id").unwrap() ,self.get_collection_name(),id )
+                        println!("element id \"{}\" inserted into collection \"{}\" with object id\
+                         \"{}\"", doc.get_str("id").unwrap() ,self.get_collection_name(),id )
                     }
                     _ => {}
                 }
@@ -53,11 +54,14 @@ pub trait  Repo <T> where T: MongoEntity + UniqueEntity + Sync + Send{
         }
     }
 
-    async fn fetch_element(&self, element: &T) -> Option<T>{
+    async fn fetch(&self, element: &T) -> Option<T>{
         let query = element.get_unique_selector();
+        self.fetch_by_query(query).await
+    }
+
+    async fn fetch_by_query(&self, query: Document) -> Option<T>{
         let data_base_collection = self.get_data_base_collection();
         let query_result = data_base_collection.find_one(query,None).await;
-
         match query_result {
             Ok(option) => {
                 if let Some(document) = option{
@@ -68,4 +72,6 @@ pub trait  Repo <T> where T: MongoEntity + UniqueEntity + Sync + Send{
             Err(_error) => None
         }
     }
+
 }
+

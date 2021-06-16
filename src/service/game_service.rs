@@ -22,7 +22,7 @@ impl GameService{
         GameService { db: db.clone(), purchase_option_service, game_repo:GameRepo::new(&*db) }
     }
 
-    fn abstract_product_to_game(&self, product: &catalog_response::Product, language: &XboxLiveLanguage<'static>) -> Game{
+    fn abstract_product_to_game(&self, product: &catalog_response::Product, language: & str, market: & str) -> Game{
         let mut name = String::from("null");
         let mut developer_name = String::from("null");
         let mut publisher_name = String::from("null");
@@ -47,7 +47,7 @@ impl GameService{
                 }
             }
         }
-        let store_uri = String::from("https://www.microsoft.com/") + & language.local() + "/p/" +
+        let store_uri = String::from("https://www.microsoft.com/") + language + "/p/" +
             &name.trim().replace(" ", "-").replace(":", "")
                 .replace("|", "").replace("&", "").to_lowercase() + "/"
             + &product.product_id;
@@ -56,41 +56,31 @@ impl GameService{
                                  poster_uri, store_uri, description);
 
         let sales = self.purchase_option_service.get_sales(product);
-        game.add_purchase_option(&language.short_id(), sales);
+        game.add_purchase_option(market, sales);
         game
 
     }
 
-    pub fn abstract_result_to_games(&self, result: &catalog_response::Response, language: &XboxLiveLanguage<'static>) -> Vec<Game>{
+    pub fn abstract_result_to_games(&self, result: &catalog_response::Response, language: & str, market: & str) -> Vec<Game>{
         result.products.iter().map(|product|{
-            self.abstract_product_to_game(product, language)
+            self.abstract_product_to_game(product, language, market)
         }).collect()
     }
 
 
-    pub async fn get_info_from_response( &self, result: &catalog_response::Response, language: &XboxLiveLanguage<'static>) -> anyhow::Result<()>
+    pub async fn get_info_from_response( &self, result: &catalog_response::Response, language: & str, market: & str) -> anyhow::Result<()>
     {
         for product in result.products.iter(){
-             let result: game::Game = self.abstract_product_to_game(product, language);
-            //result.print();
-            let id = result.id.clone();
+            let result: game::Game = self.abstract_product_to_game(product, language, market);
             self.game_repo.save(&result).await;
-            let result = self.game_repo.fetch_element(&result).await;
+            let result = self.game_repo.fetch(&result).await;
             let result = result.unwrap();
             result.print();
-            //     let id = result.id.clone();
-        //
-        //     let doc = result.to_document();
-        //     game_repo.save_doc(doc).await;
-        //     let result = game_repo.get_document_by_id(&id).await;
-        //     println!("id {}", id);
-        //     let result = result.unwrap();
-        //     let result = game::Game::create_from_document(&result);
-        //     result.print();
-        //
         }
         Ok(())
     }
+
+
 
 }
 
