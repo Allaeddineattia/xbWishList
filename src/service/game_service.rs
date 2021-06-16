@@ -53,12 +53,11 @@ impl GameService{
             + &product.product_id;
 
         let mut game = Game::new(id, name, publisher_name, developer_name,
-                                 poster_uri, store_uri, description);
+                                 poster_uri, store_uri, description, language.to_string());
 
         let sales = self.purchase_option_service.get_sales(product);
         game.add_purchase_option(market, sales);
         game
-
     }
 
     pub fn abstract_result_to_games(&self, result: &catalog_response::Response, language: & str, market: & str) -> Vec<Game>{
