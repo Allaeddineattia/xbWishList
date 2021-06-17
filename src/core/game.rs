@@ -20,7 +20,52 @@ mod affirmation_values{
 
 */
 
+mod properties{
+    pub const XboxOneXEnhanced: (&str, &str) = ("CapabilityXboxEnhanced", "Xbox One X Enhanced");
+    pub const UltraHD_4K: (&str, &str) = ("Capability4k", "4K Ultra HD");
+    pub const XboxLive: (&str, &str) = ("XboxLive", "Xbox Live");
+    pub const HDR: (&str, &str) = ("CapabilityHDR", "HDR10");
+    pub const XboxPlayAnywhere: (&str, &str) = ("XPA", "Xbox Play Anywhere");
+    pub const Shared_SplitScreen: (&str, &str) = ( "SharedSplitScreen", "Shared/Split Screen");
+    pub const Cross_PlatformMultiPlayer: (&str, &str) = ("CrossPlatformMultiPlayer", "Cross-platform multiPlayer");
+    pub const CrossPlatformCo_Op: (&str, &str) = ("CrossPlatformCoOp", "Cross-Platform Co-op");
+    pub const WindowsMixedReality: (&str, &str) = ("VREnabled", "Windows Mixed Reality");
+    pub const RayTracing: (&str, &str) = ("RayTracing", "Ray Tracing");
+    pub const FPS60: (&str, &str) = ("60fps", "60 fps+");
+    pub const FPS120: (&str, &str) = ("120fps", "120 fps");
+    pub const OptimizedForSeriesXAndS: (&str, &str) = ("ConsoleGen9Optimized", "Optimized for Series X|S");
+    pub const CloudEnabled: (&str, &str) = ("GameStreaming" ,"Cloud enabled");
+    pub const SmartDelivery: (&str, &str) = ("ConsoleCrossGen", "Smart Delivery");
+    pub const ConsoleKeyboardMouse: (&str, &str) = ("ConsoleKeyboardMouse", "Console Keyboard & Mouse");
+    pub const PcGamePad: (&str, &str) = ("PcGamePad" ,"Pc Game Pad");
+    pub const XboxLiveCrossGenMultiPlayer: (&str, &str) = ("XboxLiveCrossGenMP","Xbox Live Cross-Gen Multiplayer");
+}
 
+enum Property{
+    XboxOneXEnhanced,
+    UltraHD_4K,
+    XboxLive,
+    HDR,
+    XboxPlayAnywhere,
+    Shared_SplitScreen,
+    Cross_PlatformMultiPlayer, 
+    CrossPlatformCo_Op,
+    WindowsMixedReality,
+    RayTracing,
+    FPS60,
+    FPS120,
+    OptimizedForSeriesXAndS,
+    CloudEnabled,
+    SmartDelivery,
+    ConsoleKeyboardMouse,
+    PcGamePad,
+    XboxLiveCrossGenMultiPlayer,
+}
+
+
+
+// TODO
+// in relation games  
 
 struct game_discription{
 
@@ -60,16 +105,37 @@ impl PurchaseOption{
         for availability in self.purchase_availabilities.iter(){
             availability.print();
         }
-
     }
 }
 
+enum Property{
+    
+    XboxOneXEnhanced, //CapabilityXboxEnhanced
+    _4KUltraHD, //Capability4k
+    XboxLive, //XboxLive
+    HDR10, //CapabilityHDR,
+    XboxPlayAnywhere, // XPA
+    Shared_SplitScreen, //SharedSplitScreen
+    Cross_PlatformMultiPlayer, //CrossPlatformMultiPlayer
+    CrossPlatformCo_Op,//CrossPlatformCoOp
+    WindowsMixedReality,//VREnabled
+    RayTracing, // RayTracing
+    OptimizedForSeriesX|S, //ConsoleGen9Optimized,
+    60fps+, //60fps 
+    120fps, //120fps
+    CloudEnabled, //GameStreaming
+    SmartDelivery, //ConsoleCrossGen
+    ConsoleKeyboardMouse, //ConsoleKeyboardMouse
+    PcGamePad, //PcGamePad
+    XboxLiveCrossGenMultiPlayer, //XboxLiveCrossGenMP
+} 
 
 
 pub struct Game{
     pub id: String,
     pub game_discription: (String, game_discription),
     pub purchase_options: HashMap<String, PurchaseOption>,
+    pub properties: Vec<Property>,
 }
 
 impl Game{

@@ -32,7 +32,7 @@ pub struct Product{
     pub product_a_schema: Option<String>,
     pub product_b_schema: Option<String>,
     pub product_id: String,
-    properties: Option<ProductProperties>,
+    pub properties: Option<ProductProperties>,
     alternate_ids: Option<Vec<AlternateId>>,
     domain_data_version: Option<String>,
     ingestion_source: Option<String>,
