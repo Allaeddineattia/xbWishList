@@ -1,4 +1,5 @@
 use crate::client::input_dto::catalog_response;
+use crate::client::input_dto;
 use crate::core::game;
 use crate::repo::shared::MongoEntity;
 use crate::repo::shared::Repo;
@@ -9,6 +10,7 @@ use crate::client::client_service::microsoft_api::XboxLiveLanguage;
 use crate::core::purchase_option::{PurchaseAvailability};
 use crate::service::purchase_option_service::PurchaseOptionService;
 use crate::core::game::Game;
+use crate::core::game::Property;
 
 pub struct GameService {
     db : Rc<Database>,
@@ -20,6 +22,92 @@ impl GameService{
 
     pub fn new(db: Rc<Database>, purchase_option_service: Rc<PurchaseOptionService>) -> Self {
         GameService { db: db.clone(), purchase_option_service, game_repo:GameRepo::new(&*db) }
+    }
+
+    fn get_properties(&self, properties : & input_dto::product_property::ProductProperties) -> Vec<Property>{
+        let mut result = Vec::<Property>::new();
+        if let Some(attributes) = properties.attributes{
+            for attribute in attributes.iter(){
+                match &attribute.name[..] {
+                    "CapabilityXboxEnhanced" => {
+                        result.push(Property::XboxOneXEnhanced);
+                    },
+                    "Capability4k" => {
+                        result.push(Property::UltraHD4K);
+                    },
+                    "XboxLive" => {
+                        result.push(Property::XboxLive);
+                    },
+                    "CapabilityHDR" => {
+                        result.push(Property::HDR);
+                    },
+                    "XPA" => {
+                        result.push(Property::XboxPlayAnywhere);
+                    },
+                    "SharedSplitScreen" => {
+                        result.push(Property::SharedSplitScreen);
+                    },
+                    "CrossPlatformMultiPlayer" => {
+                        result.push(Property::CrossPlatformMultiPlayer);
+                    },
+                    "CrossPlatformCoOp" => {
+                        result.push(Property::CrossPlatformCoOp);
+                    },
+                    "VREnabled" => {
+                        result.push(Property::WindowsMixedReality);
+                    },
+                    "RayTracing" => {
+                        result.push(Property::RayTracing);
+                    },
+                    "60fps" => {
+                        result.push(Property::FPS60);
+                    },
+                    "120fps" => {
+                        result.push(Property::FPS120);
+                    },
+                    "ConsoleGen9Optimized" => {
+                        result.push(Property::OptimizedForSeriesXAndS);
+                    },
+                    "GameStreaming" => {
+                        result.push(Property::CloudEnabled);
+                    },
+                    "ConsoleCrossGen" => {
+                        result.push(Property::SmartDelivery);
+                    },
+                    "ConsoleKeyboardMouse" => {
+                        result.push(Property::ConsoleKeyboardMouse);
+                    },
+                    "PcGamePad" => {
+                        result.push(Property::PcGamePad);
+                    },
+                    "XboxLiveCrossGenMP" => {
+                        result.push(Property::CrossGenMultiPlayer);
+                    },
+                    "XblOnlineMultiPlayer" => {
+                        let min = attribute.minimum.unwrap() as u16;
+                        let max = attribute.minimum.unwrap() as u16;
+                        result.push(Property::OnlineMultiplayer(min, max));
+                    },
+                    "XblLocalMultiPlayer" => {
+                        let min = attribute.minimum.unwrap() as u16;
+                        let max = attribute.minimum.unwrap() as u16;
+                        result.push(Property::LocalMultiplayer(min, max));
+                    },
+                    "XblLocalCoop" => {
+                        let min = attribute.minimum.unwrap() as u16;
+                        let max = attribute.minimum.unwrap() as u16;
+                        result.push(Property::LocalCoop(min, max));
+                    },
+                    "XblOnlineCoop" => {
+                        let min = attribute.minimum.unwrap() as u16;
+                        let max = attribute.minimum.unwrap() as u16;
+                        result.push(Property::OnlineCoop(min, max));
+                    },
+                };
+            }
+        };
+        result
+        
     }
 
     fn abstract_product_to_game(&self, product: &catalog_response::Product, language: & str, market: & str) -> Game{
@@ -47,16 +135,16 @@ impl GameService{
                 }
             }
         }
+
         let store_uri = String::from("https://www.microsoft.com/") + language + "/p/" +
             &name.trim().replace(" ", "-").replace(":", "")
                 .replace("|", "").replace("&", "").to_lowercase() + "/"
             + &product.product_id;
 
         let mut game = Game::new(id, name, publisher_name, developer_name,
-                                 poster_uri, store_uri, description, language.to_string());
-
+                                 poster_uri, store_uri, description, language.to_string(), self.get_properties(&product.properties.unwrap()));
         let sales = self.purchase_option_service.get_sales(product);
-        game.add_purchase_option(market, sales);
+        game.add_purchase_option(market, store_uri, sales);
         game
     }
 

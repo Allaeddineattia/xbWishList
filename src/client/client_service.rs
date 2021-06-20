@@ -1,4 +1,3 @@
-use crate::client::client_service::microsoft_api::XboxLiveLanguage;
 
 
 pub mod microsoft_api{
@@ -8,8 +7,6 @@ pub mod microsoft_api{
     use anyhow::Result;
     use anyhow::anyhow;
 
-
-
     pub struct XboxLiveLanguage<'a>{
         name: &'a str, //"Argentina"
         short_id: &'a str, //"AR"
@@ -17,9 +14,66 @@ pub mod microsoft_api{
         local: &'a str, //"es-AR"
     }
 
-    pub const ARGENTINA: XboxLiveLanguage = XboxLiveLanguage::new("Argentina", "AR", "es_AR", "es-AR");
+    pub const MARKETS: phf::Map<&'static str, XboxLiveLanguage> = phf::phf_map!{
+        "AR" => ARGENTINA,
+        "AU" => AUSTRALIA,
+        "AT" => AUSTRIA,
+        "BE" => BELGIUM,
+        "NE" => BELGIUM_NL,
+        "BR" => BRAZIL,
+        "CA" => CANADA,
+        "CZ" => CZECH_REPUBLIC,
+        "DK" => DENMARK,
+        "FI" => FINLAND,
+        "FR" => FRANCE,
+        "DE" => GERMANY,
+        "GR" => GREECE,
+        "HK" => HONG_KONG,
+        "HU" => HUNGARY,
+        "IN" => INDIA,
+        "GB" => GREAT_BRITAIN,
+        "IT" => ITALY,
+        "JP" => JAPAN,
+        "MX" => MEXICO,
+        "CL" => CHILE,
+        "CO" => COLOMBIA,
+        "NL" => NETHERLANDS,
+        "NZ" => NEW_ZEALAND,
+        "NO" => NORWAY,
+        "PL" => POLAND,
+        "PT" => PORTUGAL,
+        "RU" => RUSSIA,
+        "SA" => SAUDI_ARABIA,
+        "SG" => SINGAPORE,
+        "SK" => SLOVAKIA,
+        "ZA" => SOUTH_AFRICA,
+        "KR" => KOREA,
+        "ES" => SPAIN,
+        "CH" => SWITZERLAND,
+        "AE" => UNITED_ARAB_EMIRATES,
+        "US" => UNITED_STATES,
+        "IE" => IRELAND,
+    };
 
-    pub const AUSTRALIA: XboxLiveLanguage =  XboxLiveLanguage::new("Australia", "AU", "en_AU", "en-AU") ;
+    pub const LANGUAGES: phf::Map<&'static str, XboxLiveLanguage> = phf::phf_map!{
+        "fr" => FRANCE,
+        "en" => GREAT_BRITAIN,
+        "nl" => NETHERLANDS,
+        "es" => SPAIN,
+        "de" => GERMANY,
+        "pt" => PORTUGAL,
+        "da" => DENMARK,
+        "fi" => FINLAND,
+        "it" => ITALY,
+        "ja" => JAPAN,
+        "nb" => NORWAY,
+        "ru" => RUSSIA,
+        "ko" => KOREA,
+    };
+
+
+    pub const ARGENTINA: XboxLiveLanguage = XboxLiveLanguage::new("Argentina", "AR", "es_AR", "es-AR");
+    pub const AUSTRALIA: XboxLiveLanguage = XboxLiveLanguage::new("Australia", "AU", "en_AU", "en-AU") ;
     pub const AUSTRIA: XboxLiveLanguage = XboxLiveLanguage::new("Austria", "AT", "de_AT", "de-AT");
     pub const BELGIUM: XboxLiveLanguage = XboxLiveLanguage::new("Belgium", "BE", "fr_BE", "fr-BE");
     pub const BELGIUM_NL: XboxLiveLanguage = XboxLiveLanguage::new("Belgium (NL)", "NL", "nl_BE", "nl-BE");
@@ -84,7 +138,6 @@ pub mod microsoft_api{
             &self.local
         }
 
-
         
     }
 
@@ -92,6 +145,7 @@ pub mod microsoft_api{
 
 
     pub struct MicrosoftApiService{
+
     }
 
     impl MicrosoftApiService{
