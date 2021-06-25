@@ -6,36 +6,56 @@ use mongodb::bson::{doc,Document, Bson};
 use mongodb::{Collection, Database};
 
 impl MongoEntity for Game {
+
     fn to_document(&self) -> Document{
+
         let vec: Vec<Document> = (&self.purchase_options).into_iter().map(
-            |option| {
-                option.1.to_document()
+            |purchase_option| {
+                let options: Vec<Document> = purchase_option.1.purchase_availabilities.into_iter().map(
+                    |availability|{
+                        availability.to_document()
+                    }
+                ).collect();
+                doc! {
+                    "market": purchase_option.0,
+                    "store_uri": &purchase_option.1.store_uri,
+                    "availabilities": options,
+                }
             }
-        
         ).collect();
-        let discription = doc!{
-            "id" : self.id(),
-            "name" : self.name(),
-            "publisher" : self.publisher(),
-            "poster_uri" : self.poster_uri(),
-
-
+        let description = 
+        doc! {
+            "language": self.description_language(),
+            "body": doc!{
+                "name" : self.name(),
+                "publisher" : self.publisher(),
+                "developer" : self.developer(),
+                "description" : self.description(),
+                "poster_uri" : self.poster_uri(),
+            },
         };
+
         doc!{
             "id" : self.id(),
-            "name" : self.name(),
-            "publisher" : self.publisher(),
-            "poster_uri" : self.poster_uri(),
+            "descriptions": [description],
             "purchase_options" : vec,
 
         }
     }
+
+
     fn create_from_document(doc : &Document) -> Self{
         let id = String::from(doc.get_str("id").unwrap());
-        let name = String::from(doc.get_str("name").unwrap());
-        let publisher = String::from(doc.get_str("publisher").unwrap());
-        let poster_uri = String::from(doc.get_str("poster_uri").unwrap());
-        let store_uri = String::from(doc.get_str("store_uri").unwrap());
+        if let Bson::Document(description) = doc.get_array("descriptions").unwrap().get(0).unwrap(){
+            let name = String::from(description.get_str("name").unwrap());
+            let publisher = String::from(description.get_str("publisher").unwrap());
+            let poster_uri = String::from(description.get_str("poster_uri").unwrap());
+            let developer = String::from(description.get_str("developer").unwrap());
+            let poster_uri: =  String::from(description.get_str("poster_uri").unwrap());
+        }
+
+        let store_uri = String::from(doc.get_str("").unwrap());
+
         let purchase_options: Vec<PurchaseAvailability> = doc.get_array("purchase_options").unwrap()
                             .into_iter().map(|bson| {
                                 if let Bson::Document(document) = bson{
@@ -44,6 +64,7 @@ impl MongoEntity for Game {
                                     panic!();
                                 }
                             }).collect();
+        
         Game{
             id,
             name,

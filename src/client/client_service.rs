@@ -4,6 +4,7 @@ pub mod microsoft_api{
     use reqwest::StatusCode;
     use reqwest::Url;
     use crate::client::input_dto::catalog_response;
+    use crate::client::input_dto::search_response;
     use anyhow::Result;
     use anyhow::anyhow;
 
@@ -186,6 +187,43 @@ pub mod microsoft_api{
             }
 
         }
+
+        /*fn get_games_on_deals(ids: Vec<String>, language: & 'static str, market: & 'static str){
+            let xgpleavingsoonconsole = "https://catalog.gamepass.com/sigls/v2?id=393f05bf-e596-4ef6-9487-6d4fa0eab987&language=en-us&market=US";
+            let onPublicSale = "https://reco-public.rec.mp.microsoft.com/channels/Reco/V8.0/Lists/Computed/Deal?Market=us&Language=en&ItemTypes=Game&deviceFamily=Windows.Xbox&count=2000&skipitems=100";// max 200
+            let xpgAllConsoleGames = "https://catalog.gamepass.com/sigls/v2?id=f6f1f99f-9b49-4ccd-b3bf-4d9767a77f5e&language=en-us&market=US";
+            let xpgCommingCOnsole = "https://catalog.gamepass.com/sigls/v2?id=095bda36-f5cd-43f2-9ee1-0a72f371fb96&language=en-us&market=US";
+            let topPaid = "https://reco-public.rec.mp.microsoft.com/channels/Reco/V8.0/Lists/Computed/TopPaid?Market=us&Language=en&ItemTypes=Game&deviceFamily=Windows.Xbox&count=2000&skipitems=0";//200 by request
+             
+
+        }*/
+
+        pub async fn search_games(query: &str, language: & 'static str, market: & 'static str)-> Result<search_response::SearchResponse> {
+            let client = reqwest::Client::new();
+            let url = Url::parse_with_params("https://displaycatalog.mp.microsoft.com/v7.0/productFamilies/autosuggest",
+                                             &[
+                                                 ("languages", language),
+                                                 ("market", market),
+                                                 ("query", query), //9MZ11KT5KLP6,9PH339L3Z99C
+                                                 ("productFamilyNames","Games"),
+                                             ])?;
+            
+            let resp: reqwest::Response = client
+                                            .get(url)
+                                            .header("MS-CV", "\"\"").header("content_type", "multipart/form-data").send()
+                                            .await?;       
+            return match resp.status() {
+                StatusCode::OK => {
+                    let result_test: search_response::SearchResponse = resp.json().await?;
+                    Ok(result_test)
+                }
+                _ => {
+                    println!("error: {:?}", resp.text().await?);
+                    Err(anyhow!("error"))
+                },
+            }              
+        }
+
     }
 
 

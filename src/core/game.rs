@@ -54,8 +54,8 @@ impl GameDescription{
 }
 
 pub struct PurchaseOption{
-    purchase_availabilities : Vec<PurchaseAvailability>,
-    store_uri: String,
+    pub purchase_availabilities : Vec<PurchaseAvailability>,
+    pub store_uri: String,
 }
 
 impl PurchaseOption{
@@ -103,6 +103,7 @@ impl Game{
     pub fn developer(&self) -> &str{&self.game_description.1.developer}
     pub fn description(&self) -> &str{&self.game_description.1.description}
     pub fn poster_uri(&self) -> &str{&self.game_description.1.poster_uri}
+    pub fn description_language(&self) -> &str{&self.game_description.0}
     
     pub fn print(&self){
         println!("============");
@@ -111,7 +112,7 @@ impl Game{
         println!("  publisher_name:   {}", self.game_description.1.publisher);
         println!("  developer_name:   {}", self.game_description.1.developer);
         println!("  poster_uri:       {}", self.game_description.1.poster_uri);
-        println!("  description:        {}", self.game_description.1.description);
+        println!("  description:      {}", self.game_description.1.description);
         self.print_price();
     }
 

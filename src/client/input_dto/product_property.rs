@@ -1,5 +1,6 @@
 use serde_json::{Value};
 use serde::{Deserialize, Serialize};
+
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct ProductProperties{
