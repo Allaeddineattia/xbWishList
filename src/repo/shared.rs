@@ -73,5 +73,19 @@ pub trait  Repo <T> where T: MongoEntity + UniqueEntity + Sync + Send{
         }
     }
 
+    async fn get_document_by_query(&self, query: Document)-> Option<Document>{
+        let data_base_collection = self.get_data_base_collection();
+        let query_result = data_base_collection.find_one(query,None).await;
+        match query_result {
+            Ok(option) => {
+                if let Some(document) = option{
+                    return Some(document);
+                }
+                None
+            },
+            Err(_error) => None
+        }
+    }
+
 }
 

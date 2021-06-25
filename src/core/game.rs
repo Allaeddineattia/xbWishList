@@ -33,8 +33,8 @@ pub enum Property{
 
 // TODO
 // in relation games  
-
-struct GameDescription{
+#[derive( Clone)]
+pub struct GameDescription{
 
     pub name: String,
     pub publisher: String,
@@ -52,7 +52,7 @@ impl GameDescription{
         } 
 
 }
-
+#[derive(Clone)]
 pub struct PurchaseOption{
     pub purchase_availabilities : Vec<PurchaseAvailability>,
     pub store_uri: String,
@@ -77,10 +77,10 @@ impl PurchaseOption{
 
 
 pub struct Game{
-    pub id: String,
-    pub game_description: (String, GameDescription),
-    pub purchase_options: HashMap<String, PurchaseOption>,
-    pub properties: Vec<Property>,
+    id: String,
+    game_description: (String, GameDescription),
+    purchase_options: HashMap<String, PurchaseOption>,
+    properties: Vec<Property>,
 }
 
 impl Game{
@@ -101,9 +101,11 @@ impl Game{
     pub fn name(&self) -> &str{ &self.game_description.1.name}
     pub fn publisher(&self) -> &str{&self.game_description.1.publisher}
     pub fn developer(&self) -> &str{&self.game_description.1.developer}
-    pub fn description(&self) -> &str{&self.game_description.1.description}
+    pub fn description(&self) -> &GameDescription {&self.game_description.1}
     pub fn poster_uri(&self) -> &str{&self.game_description.1.poster_uri}
     pub fn description_language(&self) -> &str{&self.game_description.0}
+
+
     
     pub fn print(&self){
         println!("============");
@@ -127,7 +129,8 @@ impl Game{
     }
 
 
-
-
+    pub fn purchase_options(&self) -> &HashMap<String, PurchaseOption> {
+        &self.purchase_options
+    }
 }
 

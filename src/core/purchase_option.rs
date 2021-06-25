@@ -8,7 +8,7 @@ mod remediation_values {
     pub const EA_PLAY: &str             = "9N8KCDNKJJQ6";
 
 }
-
+#[derive(Clone)]
 pub enum SaleState{
     PublicSale,
     DealsWithGold,
@@ -19,7 +19,7 @@ pub enum SaleState{
     NotOnSale,
 }
 
-
+#[derive(Clone)]
 pub struct PurchaseAvailability {
     pub id: String,
     pub sale_state: SaleState,

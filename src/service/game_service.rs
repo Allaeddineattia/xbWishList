@@ -159,9 +159,9 @@ impl GameService{
     {
         for product in result.products.iter(){
             let result: game::Game = self.abstract_product_to_game(product, language, market);
-            self.game_repo.save(&result).await;
-            let result = self.game_repo.fetch(&result).await;
-            let result = result.unwrap();
+            //self.game_repo.save(&result).await;
+            //let result = self.game_repo.fetch(&result).await;
+            //let result = result.unwrap();
             result.print();
         }
         Ok(())

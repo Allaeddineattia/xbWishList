@@ -1,15 +1,40 @@
-use crate::core::game::Game;
-use crate::repo::shared::MongoEntity;
+use crate::core::game::{Game, PurchaseOption, GameDescription};
+use crate::repo::shared::{MongoEntity, UniqueEntity};
 use super::shared;
 use crate::core::purchase_option::PurchaseAvailability;
 use mongodb::bson::{doc,Document, Bson};
 use mongodb::{Collection, Database};
+use std::collections::HashMap;
+use std::any::Any;
 
-impl MongoEntity for Game {
+
+struct GameEntity{
+    pub id: String,
+    pub descriptions: HashMap<String, GameDescription>,
+    pub purchase_options: HashMap<String, PurchaseOption>,
+}
+impl GameEntity{
+    pub fn add_game(&mut self, game: &Game) -> Result<(), &'static str> {
+        if &self.id != game.id() {
+            return Err("not compatible ");
+        };
+        let g = (*game.description()).clone();
+        self.descriptions.insert(game.description_language().to_string(), g);
+        for option in game.purchase_options(){
+            let o = (*option.1).clone();
+            self.purchase_options.insert(option.0.to_string(), o);
+        }
+        Ok(())
+    }
+}
+
+
+
+impl MongoEntity for GameEntity {
 
     fn to_document(&self) -> Document{
 
-        let vec: Vec<Document> = (&self.purchase_options).into_iter().map(
+        let purchase_options: Vec<Document> = (self.purchase_options).into_iter().map(
             |purchase_option| {
                 let options: Vec<Document> = purchase_option.1.purchase_availabilities.into_iter().map(
                     |availability|{
@@ -23,7 +48,20 @@ impl MongoEntity for Game {
                 }
             }
         ).collect();
-        let description = 
+        let descriptions = (self.des).into_iter().map(
+            |purchase_option| {
+                let options: Vec<Document> = purchase_option.1.purchase_availabilities.into_iter().map(
+                    |availability|{
+                        availability.to_document()
+                    }
+                ).collect();
+                doc! {
+                    "market": purchase_option.0,
+                    "store_uri": &purchase_option.1.store_uri,
+                    "availabilities": options,
+                }
+            }
+        ).collect();
         doc! {
             "language": self.description_language(),
             "body": doc!{
@@ -37,7 +75,7 @@ impl MongoEntity for Game {
 
         doc!{
             "id" : self.id(),
-            "descriptions": [description],
+            "description": description,
             "purchase_options" : vec,
 
         }
@@ -51,7 +89,7 @@ impl MongoEntity for Game {
             let publisher = String::from(description.get_str("publisher").unwrap());
             let poster_uri = String::from(description.get_str("poster_uri").unwrap());
             let developer = String::from(description.get_str("developer").unwrap());
-            let poster_uri: =  String::from(description.get_str("poster_uri").unwrap());
+            let poster_uri =  String::from(description.get_str("poster_uri").unwrap());
         }
 
         let store_uri = String::from(doc.get_str("").unwrap());
@@ -65,14 +103,7 @@ impl MongoEntity for Game {
                                 }
                             }).collect();
         
-        Game{
-            id,
-            name,
-            publisher,
-            purchase_options,
-            poster_uri,
-            store_uri,
-        }
+
     }
 }
 
@@ -93,11 +124,19 @@ impl GameRepo{
     }
 }
 
-impl shared::Repo for GameRepo{
+impl UniqueEntity for GameEntity{
+    fn get_unique_selector(&self) -> Document {
+        doc! {"id": &self.id}
+    }
+}
+
+impl shared::Repo<GameEntity> for GameRepo{
     fn get_data_base_collection(&self) -> & Collection {
         & self.data_base_collection
     }
     fn get_collection_name(&self) -> & str{
         & self.collection_name
     }
+
+
 }
