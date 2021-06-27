@@ -8,13 +8,13 @@ use std::collections::HashMap;
 use std::any::Any;
 
 
-struct GameEntity{
+pub struct GameEntity{
     pub id: String,
     pub descriptions: HashMap<String, GameDescription>,
     pub purchase_options: HashMap<String, PurchaseOption>,
 }
 impl GameEntity{
-    pub fn add_game(&mut self, game: &Game) -> Result<(), &'static str> {
+    pub fn add_info(&mut self, game: &Game) -> Result<(), &'static str> {
         if &self.id != game.id() {
             return Err("not compatible ");
         };
@@ -25,6 +25,18 @@ impl GameEntity{
             self.purchase_options.insert(option.0.to_string(), o);
         }
         Ok(())
+    }
+
+    pub fn new(id: &str) -> Self{
+        Self{
+            id: id.to_string(),
+            descriptions: HashMap::<String, GameDescription>::new(),
+            purchase_options: HashMap::<String, PurchaseOption>::new()
+        }
+    }
+
+    pub fn print (&self){
+        println!("hehi");
     }
 }
 

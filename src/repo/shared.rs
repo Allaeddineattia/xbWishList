@@ -28,10 +28,13 @@ pub trait  Repo <T> where T: MongoEntity + UniqueEntity + Sync + Send{
                     println!("element with selector \"{}\" updated into collection \"{}\" with object id \"{}\"",
                              &entity.get_unique_selector(), self.get_collection_name(),id )
                 }
-            }
+            };
+            return;
+        }else {
+            let document = entity.to_document();
+            self.save_doc( document).await;
         }
-        let document = entity.to_document();
-        self.save_doc( document).await;
+
 
     }
 
@@ -56,6 +59,11 @@ pub trait  Repo <T> where T: MongoEntity + UniqueEntity + Sync + Send{
 
     async fn fetch(&self, element: &T) -> Option<T>{
         let query = element.get_unique_selector();
+        self.fetch_by_query(query).await
+    }
+
+    async fn fetch_by_id(&self, id: &str) -> Option<T>{
+        let query = doc! {"id": id};
         self.fetch_by_query(query).await
     }
 

@@ -4,7 +4,7 @@ use crate::core::game;
 use crate::repo::shared::MongoEntity;
 use crate::repo::shared::Repo;
 use mongodb::Database;
-use crate::repo::game_repo::GameRepo;
+use crate::repo::game_repo::{GameRepo, GameEntity};
 use std::rc::Rc;
 use crate::client::client_service::microsoft_api::XboxLiveLanguage;
 use crate::core::purchase_option::{PurchaseAvailability};
@@ -157,14 +157,27 @@ impl GameService{
         }).collect()
     }
 
+    pub async fn save_game(&self, game:&Game){
+        let mut game_entity: GameEntity;
+        let fetch_result = self.game_repo.fetch_by_id(game.id()).await;
+        if let Some(mut entity) = fetch_result{
+            game_entity = entity;
+        }else{
+            game_entity = GameEntity::new(game.id());
+        }
+        game_entity.add_info(game);
+        self.game_repo.save(&game_entity).await;
+    }
 
     pub async fn get_info_from_response( &self, result: &catalog_response::Response, language: & str, market: & str) -> anyhow::Result<()>
     {
         for product in result.products.iter(){
             let result: game::Game = self.abstract_product_to_game(product, language, market);
+            self.save_game(&result);
+
             //self.game_repo.save(&result).await;
-            //let result = self.game_repo.fetch(&result).await;
-            //let result = result.unwrap();
+            let result = self.game_repo.fetch_by_id(result.id()).await;
+            let result = result.unwrap();
             result.print();
         }
         Ok(())
