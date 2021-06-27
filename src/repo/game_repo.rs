@@ -34,9 +34,9 @@ impl MongoEntity for GameEntity {
 
     fn to_document(&self) -> Document{
 
-        let purchase_options: Vec<Document> = (self.purchase_options).into_iter().map(
+        let purchase_options: Vec<Document> = (&self.purchase_options).into_iter().map(
             |purchase_option| {
-                let options: Vec<Document> = purchase_option.1.purchase_availabilities.into_iter().map(
+                let options: Vec<Document> = (&purchase_option.1.purchase_availabilities).into_iter().map(
                     |availability|{
                         availability.to_document()
                     }
@@ -48,62 +48,83 @@ impl MongoEntity for GameEntity {
                 }
             }
         ).collect();
-        let descriptions = (self.des).into_iter().map(
-            |purchase_option| {
-                let options: Vec<Document> = purchase_option.1.purchase_availabilities.into_iter().map(
-                    |availability|{
-                        availability.to_document()
-                    }
-                ).collect();
+
+        let descriptions: Vec<Document> = (&self.descriptions).into_iter().map(
+            |pair| {
+                let desc = pair.1;
                 doc! {
-                    "market": purchase_option.0,
-                    "store_uri": &purchase_option.1.store_uri,
-                    "availabilities": options,
+                "language": &pair.0,
+                "body": doc!{
+                    "name" : &pair.1.name,
+                    "publisher" : &pair.1.publisher,
+                    "developer" : &pair.1.developer,
+                    "description" : &pair.1.description,
+                    "poster_uri" : &pair.1.poster_uri,
+                    },
                 }
             }
         ).collect();
-        doc! {
-            "language": self.description_language(),
-            "body": doc!{
-                "name" : self.name(),
-                "publisher" : self.publisher(),
-                "developer" : self.developer(),
-                "description" : self.description(),
-                "poster_uri" : self.poster_uri(),
-            },
-        };
+
 
         doc!{
-            "id" : self.id(),
-            "description": description,
-            "purchase_options" : vec,
-
+            "id" : &self.id,
+            "descriptions": descriptions,
+            "purchase_options" : purchase_options,
         }
     }
 
 
     fn create_from_document(doc : &Document) -> Self{
         let id = String::from(doc.get_str("id").unwrap());
-        if let Bson::Document(description) = doc.get_array("descriptions").unwrap().get(0).unwrap(){
-            let name = String::from(description.get_str("name").unwrap());
-            let publisher = String::from(description.get_str("publisher").unwrap());
-            let poster_uri = String::from(description.get_str("poster_uri").unwrap());
-            let developer = String::from(description.get_str("developer").unwrap());
-            let poster_uri =  String::from(description.get_str("poster_uri").unwrap());
-        }
+        let mut game_descriptions: HashMap<String, GameDescription> = HashMap::new();
 
-        let store_uri = String::from(doc.get_str("").unwrap());
+        for description in doc.get_array("descriptions").unwrap().into_iter(){
+            if let Bson::Document(desc) = description{
+                let body = desc.get_document("body").unwrap();
+                game_descriptions.insert(
+                    desc.get_str("language").unwrap().to_string(),
+                    GameDescription{
+                         name: body.get_str("name").unwrap().to_string(),
+                         publisher: body.get_str("publisher").unwrap().to_string(),
+                         developer: body.get_str("developer").unwrap().to_string(),
+                         description: body.get_str("description").unwrap().to_string(),
+                         poster_uri: body.get_str("poster_uri").unwrap().to_string()
+                     }
+                );
+            };
+        };
 
-        let purchase_options: Vec<PurchaseAvailability> = doc.get_array("purchase_options").unwrap()
-                            .into_iter().map(|bson| {
-                                if let Bson::Document(document) = bson{
-                                    PurchaseAvailability::create_from_document(document)
-                                }else{
-                                    panic!();
-                                }
-                            }).collect();
+        let mut purchase_options: HashMap<String, PurchaseOption> = HashMap::new();
         
-
+        for bson in  doc.get_array("purchase_options").unwrap().into_iter(){
+            if let Bson::Document(document) = bson{
+                let market = document.get_str("market").unwrap().to_string();
+                let store_uri = document.get_str("store_uri").unwrap().to_string();
+                let availabilities = document.get_array("availabilities").unwrap().into_iter().map(
+                    |doc|{
+                        match doc {
+                            Bson::Document(doc)=>{
+                                PurchaseAvailability::create_from_document(doc)
+                            },
+                            _ => {
+                                panic!()
+                            }
+                        }
+                    }
+                ).collect();
+                let purchase_option = PurchaseOption{
+                    purchase_availabilities: availabilities,
+                    store_uri
+                };
+                purchase_options.insert(market, purchase_option);
+            }
+        };
+        return Self{
+            id,
+            descriptions: game_descriptions,
+            purchase_options
+        }
+        
     }
 }
 
@@ -137,6 +158,14 @@ impl shared::Repo<GameEntity> for GameRepo{
     fn get_collection_name(&self) -> & str{
         & self.collection_name
     }
+}
 
 
+#[cfg(test)]
+mod tests{
+    use super::*;
+    #[test]
+    fn test_game_entity_to_document(){
+
+    }
 }

@@ -26,7 +26,7 @@ impl GameService{
 
     fn get_properties(&self, properties : & input_dto::product_property::ProductProperties) -> Vec<Property>{
         let mut result = Vec::<Property>::new();
-        if let Some(attributes) = properties.attributes{
+        if let Some(attributes) = &properties.attributes{
             for attribute in attributes.iter(){
                 match &attribute.name[..] {
                     "CapabilityXboxEnhanced" => {
@@ -103,6 +103,7 @@ impl GameService{
                         let max = attribute.minimum.unwrap() as u16;
                         result.push(Property::OnlineCoop(min, max));
                     },
+                    _ => {}
                 };
             }
         };
@@ -141,8 +142,10 @@ impl GameService{
                 .replace("|", "").replace("&", "").to_lowercase() + "/"
             + &product.product_id;
 
+        let properties = self.get_properties(&product.properties.as_ref().unwrap());
+
         let mut game = Game::new(id, name, publisher_name, developer_name,
-                                 poster_uri, store_uri, description, language.to_string(), self.get_properties(&product.properties.unwrap()));
+                                 poster_uri,  description, language.to_string(), properties);
         let sales = self.purchase_option_service.get_sales(product);
         game.add_purchase_option(market, store_uri, sales);
         game

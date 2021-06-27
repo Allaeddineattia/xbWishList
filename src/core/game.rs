@@ -86,7 +86,7 @@ pub struct Game{
 impl Game{
 
     pub fn new(id: String, name: String, publisher: String, developer: String, poster_uri: String,
-               store_uri: String, description: String, language: String, properties: Vec<Property>) -> Self {
+               description: String, language: String, properties: Vec<Property>) -> Self {
         let game_description = (language , GameDescription::new(name, publisher, developer, poster_uri, description));
         Game { id , game_description, purchase_options: HashMap::new(), properties}
     }

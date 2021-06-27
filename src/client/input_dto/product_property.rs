@@ -37,7 +37,7 @@ pub struct ProductProperties{
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-struct Attribute{
+pub struct Attribute{
     pub name : String,
     pub minimum: Option<i32>,
     pub maximum: Option<i32>,
