@@ -154,8 +154,8 @@ pub mod microsoft_api{
             MicrosoftApiService{}
         }
 
-        pub async fn get_games(ids: Vec<String>, language: & 'static str, market: & 'static str)-> Result<catalog_response::Response> {
-            println!("getting games for {:#?}", ids);
+        pub async fn get_games(ids: Vec<String>, language: & str, market: & str)-> Result<catalog_response::Response> {
+            println!("getting info for games with \"language\"<{}> \"market\"<{}> ids {:#?} ", language, market, ids);
 
             let client = reqwest::Client::new();
             let ids : String = ids.join(",");
@@ -188,7 +188,8 @@ pub mod microsoft_api{
 
         }
 
-        /*fn get_games_on_deals(ids: Vec<String>, language: & 'static str, market: & 'static str){
+        /*
+        fn get_games_on_deals(ids: Vec<String>, language: & 'static str, market: & 'static str){
             let xgpleavingsoonconsole = "https://catalog.gamepass.com/sigls/v2?id=393f05bf-e596-4ef6-9487-6d4fa0eab987&language=en-us&market=US";
             let onPublicSale = "https://reco-public.rec.mp.microsoft.com/channels/Reco/V8.0/Lists/Computed/Deal?Market=us&Language=en&ItemTypes=Game&deviceFamily=Windows.Xbox&count=2000&skipitems=100";// max 200
             let xpgAllConsoleGames = "https://catalog.gamepass.com/sigls/v2?id=f6f1f99f-9b49-4ccd-b3bf-4d9767a77f5e&language=en-us&market=US";

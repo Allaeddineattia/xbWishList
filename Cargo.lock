@@ -534,6 +534,12 @@ checksum = "3dcaa9ae7725d12cdb85b3ad99a434db70b468c09ded17e012d86b5c1010f7a7"
 
 [[package]]
 name = "futures"
+version = "0.1.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a471a38ef8ed83cd6e40aa59c1ffe17db6855c18e3604d9c4ed8c08ebc28678"
+
+[[package]]
+name = "futures"
 version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e7e43a803dae2fa37c1f6a8fe121e1f7bf9548b4dfc0522a42f34145dadfc27"
@@ -1087,7 +1093,7 @@ dependencies = [
  "chrono",
  "derivative",
  "err-derive",
- "futures",
+ "futures 0.3.15",
  "hex",
  "hmac",
  "lazy_static",
@@ -2094,7 +2100,7 @@ dependencies = [
  "backtrace",
  "cfg-if 1.0.0",
  "enum-as-inner",
- "futures",
+ "futures 0.3.15",
  "idna",
  "lazy_static",
  "log",
@@ -2112,7 +2118,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "710f593b371175db53a26d0b38ed2978fafb9e9e8d3868b1acd753ea18df0ceb"
 dependencies = [
  "cfg-if 0.1.10",
- "futures",
+ "futures 0.3.15",
  "ipconfig",
  "lazy_static",
  "log",
@@ -2435,6 +2441,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
+ "futures 0.1.31",
  "mongodb",
  "phf",
  "reqwest",

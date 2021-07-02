@@ -5,24 +5,30 @@ use crate::repo::shared::MongoEntity;
 use crate::repo::shared::Repo;
 use mongodb::Database;
 use crate::repo::game_repo::{GameRepo, GameEntity, FetchGame};
+use std::collections::HashMap;
+use std::future::Future;
 use std::rc::Rc;
-use crate::client::client_service::microsoft_api::{XboxLiveLanguage, MicrosoftApiService};
+use crate::client::client_service::microsoft_api::{XboxLiveLanguage, MicrosoftApiService, MARKETS};
 use crate::core::purchase_option::{PurchaseAvailability};
 use crate::service::purchase_option_service::PurchaseOptionService;
 use crate::core::game::Game;
 use crate::core::game::Property;
+use tokio::task;
 
 pub struct GameService {
     db : Rc<Database>,
     purchase_option_service: Rc<PurchaseOptionService>,
     game_repo: GameRepo,
-   // microsoft_api_service: MicrosoftApiService,
 }
 
 impl GameService{
 
     pub fn new(db: Rc<Database>, purchase_option_service: Rc<PurchaseOptionService>) -> Self {
-        GameService { db: db.clone(), purchase_option_service, game_repo:GameRepo::new(&*db)}
+        GameService { 
+            db: db.clone(), 
+            purchase_option_service, 
+            game_repo:GameRepo::new(&*db),
+        }
     }
 
     fn get_properties(&self, properties : & input_dto::product_property::ProductProperties) -> Vec<Property>{
@@ -139,7 +145,7 @@ impl GameService{
         }
 
         let store_uri = String::from("https://www.microsoft.com/") + market.local() + "/p/" +
-            &name.trim().replace(" ", "-").replace(":", "")
+            &name.trim().replace(" ", "-").replace(":", "").replace("'", "")
                 .replace("|", "").replace("&", "").to_lowercase() + "/"
             + &product.product_id;
 
@@ -184,24 +190,72 @@ impl GameService{
         Ok(())
     }
 
-    pub async fn get_game_info(&self, id:&str , language: &  str, markets: Vec<& str>){
-        let game = self.game_repo.fetch_game(id, language, &markets).await;
-        match game{
-            FetchGame::ElementNotFound(error_message)=>{
-                println!("element is missing {} ", error_message);
-            },
-            FetchGame::Fetched(game)=>{
-                game.print()
-            }
-            FetchGame::MissingDescription(language)=>{}
-            FetchGame::MissingMarkets(markets)=>{}
+    async fn cure_description_missing (&self, id: &str, language: &str){
+        println!("game description is missing trying to cure the problem");
+        let market = & crate::client::client_service::microsoft_api::UNITED_STATES;
+        let result = MicrosoftApiService::get_games(vec![id.to_string()], language, market.short_id()).await;
+        if let Ok(result) = result{
+            self.get_info_from_response(&result, language, &market).await;
         }
 
     }
 
+    async fn cure_markets_missing(&self, id: &str, markets: &Vec<&str>){
+        println!("game description is missing markets to cure the problem");
+        let mut tasks : Vec<(&XboxLiveLanguage,task::JoinHandle<Result<crate::client::input_dto::catalog_response::Response, anyhow::Error>>)> = vec![];
+        for market in markets{
+            let market = MARKETS.get(market);
+            if let Some(market) = market{
+                let task = task::spawn(MicrosoftApiService::get_games(vec![id.to_string()], market.local(), market.short_id()));
+                tasks.push( (market,task));
+            } 
 
+        }
+
+        for task_to_join in tasks{
+            let result = task_to_join.1.await.unwrap().unwrap();
+            self.get_info_from_response(&result, task_to_join.0.local(), task_to_join.0).await;
+            
+        }
+
+    }
+
+    pub async fn get_game_info(&self, id:&str , language: & str, markets: Vec<& str>) {
+
+        while true {
+            let game = self.game_repo.fetch_game(id, language, &markets).await;
+            match game{
+                FetchGame::ElementNotFound(error_message)=>{
+                    println!("element is missing {} ", error_message);
+                    self.cure_description_missing(id, language).await;
+                    self.cure_markets_missing(id, &markets).await;
+                },
+                FetchGame::Fetched(game)=>{
+                    game.print();
+                    return;
+                }
+                FetchGame::MissingDescription(language)=>{
+                    self.cure_description_missing(id, language).await;
+                }
+                FetchGame::MissingMarkets(missing_markets)=>{
+                    self.cure_markets_missing(id, &missing_markets).await;
+                }
+            }
+        }
+        
+        
+           
+        
+
+    }
 
 }
+
+
+trait GameAPI{
+
+}
+
 
 
 

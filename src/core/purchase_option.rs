@@ -54,29 +54,29 @@ impl PurchaseAvailability {
     pub fn print(&self){
         match self.sale_state {
             SaleState::NotOnSale => {
-                print!("***Normal***");
+                print!("***Normal*** ");
             },
             SaleState::PublicSale => {
-                print!("***Public Sale***");
+                print!("***Public Sale*** ");
             },
             SaleState::DealsWithGold => {
-                print!("***DealsWithGold***");
+                print!("***DealsWithGold*** ");
             },
             SaleState::DealsWithEAPlay => {
-                print!("***DealsWithEAPlay***");
+                print!("***DealsWithEAPlay*** ");
             },
             SaleState::DealsWithXboxGP => {
-                print!("***DealsWithXboxGP***");
+                print!("***DealsWithXboxGP*** ");
             },
             SaleState::DealsWithPcGP => {
-                print!("***DealsWithPcGP***");
+                print!("***DealsWithPcGP*** ");
             },
             SaleState::DealsWithGPUltimate => {
-                print!("***DealsWithGPUltimate***");
+                print!("***DealsWithGPUltimate*** ");
             },
         }
-        println!("sale_ratio <{}%>, original_price <{}>, sale_price<{} {}>, end_date<{}>",
-                 self.discount_ratio, self.original_price, self.sale_price, self.currency, self.end_date);
+        println!("save <{}%>, original_price <{} {}>, sale_price<{} {}>, end_date<{}>",
+                 self.discount_ratio, self.original_price, self.currency, self.sale_price, self.currency, self.end_date);
     }
 
     pub fn sale_state_string(&self) -> String{

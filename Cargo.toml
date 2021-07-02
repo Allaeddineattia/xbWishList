@@ -18,3 +18,4 @@ mongodb = { version = "1.2.1", default-features = false, features = ["async-std-
 #tokio-tls = "0.3.1"
 async-trait = "0.1.50"
 phf = { version = "0.9", features = ["macros"] }
+futures = "0.1"
