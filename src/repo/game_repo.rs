@@ -70,7 +70,13 @@ impl GameEntity{
                 }
                 
             };
-            FetchGame::Fetched(Game::create(self.id, (language.to_lowercase(), game_description), purchase_options))
+            if let Some(missing_markets) = missing_markets{
+                return FetchGame::MissingMarkets(missing_markets)
+            }else {
+                FetchGame::Fetched(Game::create(self.id, (language.to_lowercase(), game_description), purchase_options))
+            }
+
+            
 
             
         }else{

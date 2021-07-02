@@ -221,32 +221,58 @@ impl GameService{
     }
 
     pub async fn get_game_info(&self, id:&str , language: & str, markets: Vec<& str>) {
-
-        while true {
-            let game = self.game_repo.fetch_game(id, language, &markets).await;
-            match game{
-                FetchGame::ElementNotFound(error_message)=>{
-                    println!("element is missing {} ", error_message);
+    let mut description_is_cured = false;
+    let mut missing_markets_are_cured = false;
+    while !description_is_cured || !missing_markets_are_cured {
+        let game = self.game_repo.fetch_game(id, language, &markets).await;
+        match game{
+            FetchGame::ElementNotFound(error_message)=>{
+                println!("element is missing {} ", error_message);
+                if !description_is_cured{
                     self.cure_description_missing(id, language).await;
+                }
+                if !missing_markets_are_cured{
                     self.cure_markets_missing(id, &markets).await;
-                },
-                FetchGame::Fetched(game)=>{
-                    game.print();
+                }
+                
+            },
+            FetchGame::Fetched(game)=>{
+                game.print();
+                return;
+            }
+            FetchGame::MissingDescription(language)=>{
+                if description_is_cured{
+                    println!("couldn't find a discription of game with id {} for language {}", id, language);
                     return;
-                }
-                FetchGame::MissingDescription(language)=>{
-                    self.cure_description_missing(id, language).await;
-                }
-                FetchGame::MissingMarkets(missing_markets)=>{
-                    self.cure_markets_missing(id, &missing_markets).await;
-                }
+                };
+                self.cure_description_missing(id, language).await;
+                description_is_cured = true;
+            }
+            FetchGame::MissingMarkets(missing_markets)=>{
+                if missing_markets_are_cured{
+                    println!("the game with id {} is not supported in the following markets {:#?}", id, missing_markets);
+                    return;
+                };
+                self.cure_markets_missing(id, &missing_markets).await;
+                missing_markets_are_cured = true;
             }
         }
+    }
         
-        
-           
-        
+    }
 
+    pub async fn get_game_info_from_all_markets(&self, id: &str){
+        let mut tasks : Vec<(&XboxLiveLanguage,task::JoinHandle<Result<crate::client::input_dto::catalog_response::Response, anyhow::Error>>)> = vec![];
+        for market in MARKETS.into_iter(){
+            let market = market.1;
+            let task = task::spawn(MicrosoftApiService::get_games(vec![id.to_string()], market.local(), market.short_id()));
+                tasks.push( (market,task));
+        }
+        for task_to_join in tasks{
+            let result = task_to_join.1.await.unwrap().unwrap();
+            self.get_info_from_response(&result, task_to_join.0.local(), task_to_join.0).await;
+            
+        }
     }
 
 }

@@ -6,7 +6,7 @@ mod service;
 use tokio::task;
 use mongodb::{Client, options::ClientOptions};
 use std::rc::Rc;
-use crate::client::client_service::microsoft_api::{MicrosoftApiService};
+use crate::client::client_service::microsoft_api::{MicrosoftApiService, MARKETS};
 
 async fn init_db() -> anyhow::Result<mongodb::Client>{
     let mut client_options = ClientOptions::parse("mongodb://localhost:27017").await?;
@@ -86,15 +86,28 @@ mod tests{
     }
 
     #[tokio::test]
-    async fn test_game_AC_Valhalla()-> Result<(), Box<dyn std::error::Error>>{
+    async fn test_game_info()-> Result<(), Box<dyn std::error::Error>>{
         let init_db_task = task::spawn(init_db());
         let client = init_db_task.await??;
         let db = Rc::new(client.database("xbWishlist"));
         
         let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
-        game_service.get_game_info(&"9n325rr1cxc8".to_uppercase(), "en-US", vec!["AR", "BR", "FR", "US"]).await;
+        game_service.get_game_info(&"c3jpd73r365s".to_uppercase(), "en-US", vec!["AR", "BR", "FR", "US"]).await;
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_game_all_markets()-> Result<(), Box<dyn std::error::Error>>{
+        let init_db_task = task::spawn(init_db());
+        let client = init_db_task.await??;
+        let db = Rc::new(client.database("xbWishlist"));
+        
+        let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
+        let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
+        game_service.get_game_info(&"9pdgwzpkcbt6".to_uppercase(), "en-US", MARKETS.keys().copied().collect::<Vec<_>>()).await;
+        Ok(())
+    }
+
 
 }
