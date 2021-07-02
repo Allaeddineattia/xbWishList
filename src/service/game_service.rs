@@ -4,9 +4,9 @@ use crate::core::game;
 use crate::repo::shared::MongoEntity;
 use crate::repo::shared::Repo;
 use mongodb::Database;
-use crate::repo::game_repo::{GameRepo, GameEntity};
+use crate::repo::game_repo::{GameRepo, GameEntity, FetchGame};
 use std::rc::Rc;
-use crate::client::client_service::microsoft_api::XboxLiveLanguage;
+use crate::client::client_service::microsoft_api::{XboxLiveLanguage, MicrosoftApiService};
 use crate::core::purchase_option::{PurchaseAvailability};
 use crate::service::purchase_option_service::PurchaseOptionService;
 use crate::core::game::Game;
@@ -16,12 +16,13 @@ pub struct GameService {
     db : Rc<Database>,
     purchase_option_service: Rc<PurchaseOptionService>,
     game_repo: GameRepo,
+   // microsoft_api_service: MicrosoftApiService,
 }
 
 impl GameService{
 
     pub fn new(db: Rc<Database>, purchase_option_service: Rc<PurchaseOptionService>) -> Self {
-        GameService { db: db.clone(), purchase_option_service, game_repo:GameRepo::new(&*db) }
+        GameService { db: db.clone(), purchase_option_service, game_repo:GameRepo::new(&*db)}
     }
 
     fn get_properties(&self, properties : & input_dto::product_property::ProductProperties) -> Vec<Property>{
@@ -160,7 +161,7 @@ impl GameService{
     pub async fn save_game(&self, game:&Game){
         let mut game_entity: GameEntity;
         let fetch_result = self.game_repo.fetch_by_id(game.id()).await;
-        if let Some(mut entity) = fetch_result{
+        if let Some(entity) = fetch_result{
             game_entity = entity;
         }else{
             game_entity = GameEntity::new(game.id());
@@ -183,13 +184,19 @@ impl GameService{
         Ok(())
     }
 
-    pub async fn get_game_info(&self, id:&str , language: & str, markets: Vec<& str>){
+    pub async fn get_game_info(&self, id:&str , language: &  str, markets: Vec<& str>){
         let game = self.game_repo.fetch_game(id, language, &markets).await;
-        if let Some(game) = game {
-            game.print();
-        }else {
-            println!("nosin");
+        match game{
+            FetchGame::ElementNotFound(error_message)=>{
+                println!("element is missing {} ", error_message);
+            },
+            FetchGame::Fetched(game)=>{
+                game.print()
+            }
+            FetchGame::MissingDescription(language)=>{}
+            FetchGame::MissingMarkets(markets)=>{}
         }
+
     }
 
 

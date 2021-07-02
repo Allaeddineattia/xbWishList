@@ -14,6 +14,14 @@ pub struct GameEntity{
     pub descriptions: HashMap<String, GameDescription>,
     pub purchase_options: HashMap<String, PurchaseOption>,
 }
+
+pub enum FetchGame<'a>{
+    Fetched(Game),
+    MissingMarkets(Vec<& 'a str>),
+    MissingDescription(& 'a str),
+    ElementNotFound(String),
+}
+
 impl GameEntity{
     pub fn add_info(&mut self, game: &Game) -> Result<(), &'static str> {
         if &self.id != game.id() {
@@ -42,29 +50,33 @@ impl GameEntity{
 
 
 
-    pub fn get_game(mut self, language: & str, markets: &Vec<& str>)-> Result<Game, String>{
+    pub fn get_game<'a>(mut self, language: & 'a str, markets: &Vec<& 'a str>)-> FetchGame<'a>{
         let game_description = self.descriptions.remove(language);
+
         if let Some(game_description) = game_description {
             let mut purchase_options = HashMap::<String, PurchaseOption>::new();
+            let mut missing_markets: Option<Vec<& 'a str>> = None;
             for market in markets{
                 if let Some(purchase_option) = self.purchase_options.remove(*market){
                     purchase_options.insert(market.to_string(), purchase_option);
                     
                 }else{
-                    println!("purchase options for market {} not found",market );
-                    return Err("purchase options for market ".to_string() + market + "not found");
-                    
+                    if let Some(missing_markets) = &mut missing_markets{
+                        missing_markets.push(market);
+                    }else {
+                        missing_markets = Some(vec![market]);
+                    }
+                    println!("purchase options for market {} not found", *market);
                 }
                 
             };
-            Ok(Game::create(self.id, (language.to_lowercase(), game_description), purchase_options))
+            FetchGame::Fetched(Game::create(self.id, (language.to_lowercase(), game_description), purchase_options))
 
             
         }else{
-            Err("There's more than one description provided from the data base you need to specify a language".to_string())
+            FetchGame::MissingDescription(language)
             
         }
-
 
     }
 
@@ -186,7 +198,7 @@ impl GameRepo{
         }
     }
 
-    pub async fn fetch_game(&self, id:&str , language: & str, markets: &Vec<& str>)-> Option<Game>{
+    pub async fn fetch_game<'a>(&self, id:&str , language: & 'a str, markets: &Vec<& 'a str>)-> FetchGame<'a>{
         let query = doc! {
             "id": id,
             "descriptions.language":language,
@@ -197,19 +209,10 @@ impl GameRepo{
         };
         let game_entity = self.fetch_by_query(query).await;
         if let Some(game_entity) = game_entity  {
-            let game = game_entity.get_game(language, markets);
-            match game{
-                Ok(game)=>{
-                    return Some(game);
-                },
-                Err(error_message)=>{
-                    return None;
-                },
-            }
+            return  game_entity.get_game(language, markets);
         }else{
-            None
+            FetchGame::ElementNotFound("hehi".to_string())
         }
-
     }
 }
 
