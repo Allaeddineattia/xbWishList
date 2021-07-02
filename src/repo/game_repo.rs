@@ -1,11 +1,12 @@
 use crate::core::game::{Game, PurchaseOption, GameDescription};
-use crate::repo::shared::{MongoEntity, UniqueEntity};
+use crate::repo::shared::{MongoEntity, Repo, UniqueEntity};
 use super::shared;
 use crate::core::purchase_option::PurchaseAvailability;
 use mongodb::bson::{doc,Document, Bson};
 use mongodb::{Collection, Database};
 use std::collections::HashMap;
 use std::any::Any;
+
 
 
 pub struct GameEntity{
@@ -38,6 +39,35 @@ impl GameEntity{
     pub fn print (&self){
         println!("hehi");
     }
+
+
+
+    pub fn get_game(mut self, language: & str, markets: &Vec<& str>)-> Result<Game, String>{
+        let game_description = self.descriptions.remove(language);
+        if let Some(game_description) = game_description {
+            let mut purchase_options = HashMap::<String, PurchaseOption>::new();
+            for market in markets{
+                if let Some(purchase_option) = self.purchase_options.remove(*market){
+                    purchase_options.insert(market.to_string(), purchase_option);
+                    
+                }else{
+                    println!("purchase options for market {} not found",market );
+                    return Err("purchase options for market ".to_string() + market + "not found");
+                    
+                }
+                
+            };
+            Ok(Game::create(self.id, (language.to_lowercase(), game_description), purchase_options))
+
+            
+        }else{
+            Err("There's more than one description provided from the data base you need to specify a language".to_string())
+            
+        }
+
+
+    }
+
 }
 
 
@@ -154,6 +184,32 @@ impl GameRepo{
             data_base_collection,
             collection_name
         }
+    }
+
+    pub async fn fetch_game(&self, id:&str , language: & str, markets: &Vec<& str>)-> Option<Game>{
+        let query = doc! {
+            "id": id,
+            "descriptions.language":language,
+            "purchase_options.market": doc!{
+                "$in": markets,
+            }
+
+        };
+        let game_entity = self.fetch_by_query(query).await;
+        if let Some(game_entity) = game_entity  {
+            let game = game_entity.get_game(language, markets);
+            match game{
+                Ok(game)=>{
+                    return Some(game);
+                },
+                Err(error_message)=>{
+                    return None;
+                },
+            }
+        }else{
+            None
+        }
+
     }
 }
 

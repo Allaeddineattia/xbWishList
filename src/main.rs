@@ -17,15 +17,15 @@ async fn init_db() -> anyhow::Result<mongodb::Client>{
 
 async fn send_req() -> Result<(), Box<dyn std::error::Error>>{
     let init_db_task = task::spawn(init_db());
-    let language = client::client_service::microsoft_api::FRANCE.local();
-    let market = client::client_service::microsoft_api::BRAZIL.short_id();
+    let language = client::client_service::microsoft_api::UNITED_STATES.local();
+    let market = &client::client_service::microsoft_api::ARGENTINA;
     let task1 = task::spawn(
         MicrosoftApiService::get_games(vec![String::from("9nn50lxzt18z"), String::from("9phkxb8rdkbc")],
-                                       language,market));
+                                       language,market.short_id() ));
 
     let task2 = task::spawn(
         MicrosoftApiService::get_games(vec![String::from("9n2zdn7nwqkv"), String::from("9ph339l3z99c")],
-                                        language, market));// nier: bppzvt8bz15n //9PH339L3Z99C / fifa 9nn50lxzt18z / starwars c2csdtscbz0c
+                                        language, market.short_id()));// nier: bppzvt8bz15n //9PH339L3Z99C / fifa 9nn50lxzt18z / starwars c2csdtscbz0c
     let client = init_db_task.await??;
 
     let db = Rc::new(client.database("xbWishlist"));
@@ -55,4 +55,22 @@ fn main() {
     //game::get_info_from_response(&result);
     //game::read_from_file();
     //Ok(())
+}
+
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+
+    #[tokio::test]
+    async fn  test_game_get_info()-> Result<(), Box<dyn std::error::Error>>{
+        let init_db_task = task::spawn(init_db());
+        let client = init_db_task.await??;
+        let db = Rc::new(client.database("xbWishlist"));
+        
+        let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
+        let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
+        game_service.get_game_info("9PHKXB8RDKBC", "en-US", vec!["AR", "BR"]).await;
+        Ok(())
+    }
 }

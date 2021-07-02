@@ -111,7 +111,7 @@ impl GameService{
         
     }
 
-    fn abstract_product_to_game(&self, product: &catalog_response::Product, language: & str, market: & str) -> Game{
+    fn abstract_product_to_game(&self, product: &catalog_response::Product, language: & str, market: &  XboxLiveLanguage::<'static>) -> Game{
         let mut name = String::from("null");
         let mut developer_name = String::from("null");
         let mut publisher_name = String::from("null");
@@ -137,7 +137,7 @@ impl GameService{
             }
         }
 
-        let store_uri = String::from("https://www.microsoft.com/") + language + "/p/" +
+        let store_uri = String::from("https://www.microsoft.com/") + market.local() + "/p/" +
             &name.trim().replace(" ", "-").replace(":", "")
                 .replace("|", "").replace("&", "").to_lowercase() + "/"
             + &product.product_id;
@@ -147,11 +147,11 @@ impl GameService{
         let mut game = Game::new(id, name, publisher_name, developer_name,
                                  poster_uri,  description, language.to_string(), properties);
         let sales = self.purchase_option_service.get_sales(product);
-        game.add_purchase_option(market, store_uri, sales);
+        game.add_purchase_option(market.short_id(), store_uri, sales);
         game
     }
 
-    pub fn abstract_result_to_games(&self, result: &catalog_response::Response, language: & str, market: & str) -> Vec<Game>{
+    pub fn abstract_result_to_games(&self, result: &catalog_response::Response, language: & str, market: &  XboxLiveLanguage::<'static>) -> Vec<Game>{
         result.products.iter().map(|product|{
             self.abstract_product_to_game(product, language, market)
         }).collect()
@@ -169,11 +169,11 @@ impl GameService{
         self.game_repo.save(&game_entity).await;
     }
 
-    pub async fn get_info_from_response( &self, result: &catalog_response::Response, language: & str, market: & str) -> anyhow::Result<()>
+    pub async fn get_info_from_response( &self, result: &catalog_response::Response, language: & str, market: &  XboxLiveLanguage::<'static>) -> anyhow::Result<()>
     {
         for product in result.products.iter(){
             let result: game::Game = self.abstract_product_to_game(product, language, market);
-            self.save_game(&result);
+            self.save_game(&result).await;
 
             //self.game_repo.save(&result).await;
             let result = self.game_repo.fetch_by_id(result.id()).await;
@@ -183,8 +183,19 @@ impl GameService{
         Ok(())
     }
 
+    pub async fn get_game_info(&self, id:&str , language: & str, markets: Vec<& str>){
+        let game = self.game_repo.fetch_game(id, language, &markets).await;
+        if let Some(game) = game {
+            game.print();
+        }else {
+            println!("nosin");
+        }
+    }
+
 
 
 }
+
+
 
 

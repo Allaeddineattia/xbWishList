@@ -91,6 +91,14 @@ impl Game{
         Game { id , game_description, purchase_options: HashMap::new(), properties}
     }
 
+    pub fn create(id: String, game_description: (String, GameDescription), purchase_options: HashMap<String, PurchaseOption>) -> Self{
+        Game{
+            id, 
+            game_description,
+            purchase_options,
+            properties: vec![],
+        }
+    }
 
     pub fn add_purchase_option(&mut self, market: &str, store_uri: String, purchase_availabilities: Vec<PurchaseAvailability>){
         let purchase_option = PurchaseOption::new(purchase_availabilities, store_uri);
