@@ -60,6 +60,8 @@ fn main() {
 
 #[cfg(test)]
 mod tests{
+    use std::collections::HashSet;
+
     use super::*;
 
     #[tokio::test]
@@ -93,7 +95,7 @@ mod tests{
         
         let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
-        game_service.get_game_info(&"c3jpd73r365s".to_uppercase(), "en-US", vec!["AR", "BR", "FR", "US"]).await;
+        game_service.get_game_info(&"c3jpd73r365s".to_uppercase(), "en-US", vec!["AR", "BR", "FR", "US", "NE"]).await;
         Ok(())
     }
 
@@ -105,7 +107,37 @@ mod tests{
         
         let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
-        game_service.get_game_info(&"9pdgwzpkcbt6".to_uppercase(), "en-US", MARKETS.keys().copied().collect::<Vec<_>>()).await;
+        game_service.get_game_info("9MZ11KT5KLP6", "en-US", MARKETS.keys().copied().collect::<Vec<_>>()).await;
+        Ok(())
+    }
+    #[tokio::test]
+    async fn test_wishlist() -> Result<(), Box<dyn std::error::Error>>{
+        let init_db_task = task::spawn(init_db());
+        let client = init_db_task.await??;
+        let db = Rc::new(client.database("xbWishlist"));
+        
+        let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
+        let game_service = Rc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone()));
+        let wishlist_service = service::wishlist_service::WishlistService::new(game_service.clone());
+        let mut prefered_markets = HashSet::new();
+        prefered_markets.insert("BR".to_string());
+        prefered_markets.insert("AR".to_string());
+        prefered_markets.insert("US".to_string());
+        prefered_markets.insert("FR".to_string());
+
+        let mut game_list = Vec::<(&str, Option<HashSet<&str>>)>::new();
+        game_list.push(("9MZ11KT5KLP6", None));
+        game_list.push( ( "9nxvc0482qs5", Some(["BR", "GR"].iter().cloned().collect()) ) );
+
+        let wishlist_pref = crate::core::wishlist::WishlistPreferences{
+            language: "en-US".to_string(),
+            markets: prefered_markets
+        };
+
+        let wishlist = crate::core::wishlist::Wishlist::new("45", wishlist_pref, &game_list);
+        wishlist_service.print_wishlist(&wishlist).await;
+
+
         Ok(())
     }
 

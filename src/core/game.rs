@@ -66,11 +66,14 @@ impl PurchaseOption{
         }
     }
     fn print(&self){
-        println!("store_uri {}", self.store_uri);
+        //println!("store_uri {}", self.store_uri);
+        println!("{{");
         for availability in self.purchase_availabilities.iter(){
             availability.print();
         }
+        println!("}}\n");
     }
+
 }
 
 
@@ -116,17 +119,24 @@ impl Game{
 
     
     pub fn print(&self){
-        println!("============");
         println!("  id:               {}", self.id);
         println!("  name:             {}", self.game_description.1.name);
         println!("  publisher_name:   {}", self.game_description.1.publisher);
         println!("  developer_name:   {}", self.game_description.1.developer);
         println!("  poster_uri:       {}", self.game_description.1.poster_uri);
         println!("  description:      {}", self.game_description.1.description);
-        self.print_price();
+        self.print_purchase_options();
     }
 
-    fn print_price(&self){
+    pub fn print_price(&self){
+        println!("name:             {}", self.game_description.1.name);
+        for option in &self.purchase_options {
+            println!("market {}", option.0);
+            option.1.print();
+        }
+    }
+
+    fn print_purchase_options(&self){
         println!("_______Purchase__Options________");
 
         for option in &self.purchase_options {

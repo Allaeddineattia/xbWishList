@@ -54,30 +54,37 @@ impl PurchaseAvailability {
     pub fn print(&self){
         match self.sale_state {
             SaleState::NotOnSale => {
-                print!("***Normal*** ");
+                println!("     original_price {}  {}",self.original_price, self.currency);
+
             },
             SaleState::PublicSale => {
-                print!("***Public Sale*** ");
+                println!("!!!! Sale {}% off, now for {}{} instead of {}{} available until {}",
+                self.discount_ratio, self.sale_price, self.currency, self.original_price, self.currency, self.end_date);
             },
             SaleState::DealsWithGold => {
-                print!("***DealsWithGold*** ");
+                println!("!!!! Sale With gold {}% off, now for {}{} instead of {}{} available until {}",
+                self.discount_ratio, self.sale_price, self.currency, self.original_price, self.currency, self.end_date);
             },
             SaleState::DealsWithEAPlay => {
-                print!("***DealsWithEAPlay*** ");
+                println!("     save with EAPlay {}% off, now for {}{} instead of {}{} available until {}",
+                self.discount_ratio, self.sale_price, self.currency, self.original_price, self.currency, self.end_date);
             },
             SaleState::DealsWithXboxGP => {
-                print!("***DealsWithXboxGP*** ");
+                println!("     save with Xbox GamePass {}% off, now for {}{} instead of {}{} available until {}",
+                self.discount_ratio, self.sale_price, self.currency, self.original_price, self.currency, self.end_date);
             },
             SaleState::DealsWithPcGP => {
-                print!("***DealsWithPcGP*** ");
+                println!("     save with PC GamePass {}% off, now for {}{} instead of {}{} available until {}",
+                self.discount_ratio, self.sale_price, self.currency, self.original_price, self.currency, self.end_date);
             },
             SaleState::DealsWithGPUltimate => {
-                print!("***DealsWithGPUltimate*** ");
+                println!("     save with GamePass Ultimate {}% off, now for {}{} instead of {}{} available until {}",
+                self.discount_ratio, self.sale_price, self.currency, self.original_price, self.currency, self.end_date);
             },
         }
-        println!("save <{}%>, original_price <{} {}>, sale_price<{} {}>, end_date<{}>",
-                 self.discount_ratio, self.original_price, self.currency, self.sale_price, self.currency, self.end_date);
+
     }
+
 
     pub fn sale_state_string(&self) -> String{
         match self.sale_state {

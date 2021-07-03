@@ -221,43 +221,54 @@ impl GameService{
     }
 
     pub async fn get_game_info(&self, id:&str , language: & str, markets: Vec<& str>) {
-    let mut description_is_cured = false;
-    let mut missing_markets_are_cured = false;
-    while !description_is_cured || !missing_markets_are_cured {
-        let game = self.game_repo.fetch_game(id, language, &markets).await;
-        match game{
-            FetchGame::ElementNotFound(error_message)=>{
-                println!("element is missing {} ", error_message);
-                if !description_is_cured{
+        let id = &id.to_uppercase()[..];
+        let mut description_is_cured = false;
+        let mut missing_markets_are_cured = false;
+        let mut not_found = false;
+        while !description_is_cured || !missing_markets_are_cured || !not_found{
+            let game = self.game_repo.fetch_game(id, language, &markets).await;
+            match game{
+                FetchGame::ElementNotFound(error_message)=>{
+                    
+                    println!("element is missing {} ", error_message);
+                    if description_is_cured{
+                        println!("no game found with this id {}", id);
+                        not_found = true;
+                    }
+
+                    if !description_is_cured{
+                        self.cure_description_missing(id, language).await;
+                    }
+                    description_is_cured = true;
+                    if !missing_markets_are_cured{
+                        self.cure_markets_missing(id, &markets).await;
+                    }
+                    missing_markets_are_cured = true;
+                    
+                },
+                FetchGame::Fetched(game)=>{
+                    println!("\n-----------------\n");
+                    game.print_price();
+                    return;
+                }
+                FetchGame::MissingDescription(language)=>{
+                    if description_is_cured{
+                        println!("couldn't find a discription of game with id {} for language {}", id, language);
+                        return;
+                    };
                     self.cure_description_missing(id, language).await;
+                    description_is_cured = true;
                 }
-                if !missing_markets_are_cured{
-                    self.cure_markets_missing(id, &markets).await;
+                FetchGame::MissingMarkets(missing_markets)=>{
+                    if missing_markets_are_cured{
+                        println!("the game with id {} is not supported in the following markets {:#?}", id, missing_markets);
+                        return;
+                    };
+                    self.cure_markets_missing(id, &missing_markets).await;
+                    missing_markets_are_cured = true;
                 }
-                
-            },
-            FetchGame::Fetched(game)=>{
-                game.print();
-                return;
-            }
-            FetchGame::MissingDescription(language)=>{
-                if description_is_cured{
-                    println!("couldn't find a discription of game with id {} for language {}", id, language);
-                    return;
-                };
-                self.cure_description_missing(id, language).await;
-                description_is_cured = true;
-            }
-            FetchGame::MissingMarkets(missing_markets)=>{
-                if missing_markets_are_cured{
-                    println!("the game with id {} is not supported in the following markets {:#?}", id, missing_markets);
-                    return;
-                };
-                self.cure_markets_missing(id, &missing_markets).await;
-                missing_markets_are_cured = true;
             }
         }
-    }
         
     }
 
