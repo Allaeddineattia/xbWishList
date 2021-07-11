@@ -20,10 +20,16 @@ pub struct WishlistPreferences{
     pub language: String,
     pub markets: HashSet<String>
 }
+impl WishlistPreferences{
+    pub fn markets(&self) -> Vec<&str>{
+        self.markets.iter().map(|s|{&s[..]}).collect()
+    }
+}
 
 pub struct WishlistElement{
-    game_id: String,
-    markets: HashSet<String>
+
+    pub game_id: String,
+    pub markets: HashSet<String>
 }
 
 impl WishlistElement {
@@ -53,15 +59,20 @@ impl WishlistElement {
         self.markets = markets;
     }
 
+    pub fn markets(&self) -> Vec<&str>{
+        self.markets.iter().map(|s|{&s[..]}).collect()
+    }
+
 }
 
 pub struct Wishlist{
-    id: String,
-    games: Vec<WishlistElement>,
-    wishlist_preference: WishlistPreferences, 
+    pub name: String,
+    pub games: Vec<WishlistElement>,
+    pub preference: WishlistPreferences, 
 }
+
 impl Wishlist {
-    pub fn new(id: &str,  wishlist_preference: WishlistPreferences, games: &Vec<(&str, Option<HashSet<&str>>)>) -> Self{
+    pub fn new(name: &str,  preference: WishlistPreferences, games: &Vec<(&str, Option<HashSet<&str>>)>) -> Self{
         let mut game_list = Vec::<WishlistElement>::new();
 
         for game in games{
@@ -75,22 +86,22 @@ impl Wishlist {
         }
 
         Wishlist{
-            id: id.to_string(),
+            name: name.to_string(),
             games: game_list,
-            wishlist_preference, 
+            preference, 
         }
     }
     pub fn games(&self) -> Vec<(&str, &HashSet<String>)>{
         self.games.iter().map(|element|{
             if element.markets.is_empty(){
-                return (&element.game_id[..], &self.wishlist_preference.markets);
+                return (&element.game_id[..], &self.preference.markets);
             }else{
                 return (&element.game_id[..], &element.markets);
             }
         }).collect()
     }
 
-    pub fn wishlist_preference(&self) -> &WishlistPreferences{
-        &self.wishlist_preference
+    pub fn preference(&self) -> &WishlistPreferences{
+        &self.preference
     }
 }

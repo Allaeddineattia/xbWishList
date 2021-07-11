@@ -20,7 +20,6 @@ use crate::core::purchase_option::PurchaseAvailability;
 use mongodb::bson::{doc,Document, Bson};
 use mongodb::{Collection, Database};
 use std::collections::HashMap;
-use std::any::Any;
 
 
 
@@ -206,7 +205,6 @@ impl MongoEntity for GameEntity {
 pub struct  GameRepo{
     data_base_collection : Collection,
     collection_name : String ,
-
 }
 impl GameRepo{
     pub fn new(data_base : & Database) -> GameRepo{

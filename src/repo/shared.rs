@@ -58,8 +58,7 @@ pub trait  Repo <T> where T: MongoEntity + UniqueEntity + Sync + Send{
             Ok(result) => {
                 match result.inserted_id {
                     Bson::ObjectId(id) =>{
-                        println!("element id \"{}\" inserted into collection \"{}\" with object id\
-                         \"{}\"", doc.get_str("id").unwrap() ,self.get_collection_name(),id )
+                        println!("element inserted into collection \"{}\" with object id \"{}\"",  self.get_collection_name(),id )
                     }
                     _ => {}
                 }

@@ -91,7 +91,7 @@ mod tests{
         Ok(())
     }
     #[tokio::test]
-    async fn test_game_gHost_runner()-> Result<(), Box<dyn std::error::Error>>{
+    async fn test_game_ghost_runner()-> Result<(), Box<dyn std::error::Error>>{
         let init_db_task = task::spawn(init_db());
         let client = init_db_task.await??;
         let db = Rc::new(client.database("xbWishlist"));
@@ -133,7 +133,7 @@ mod tests{
         
         let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = Rc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone()));
-        let wishlist_service = service::wishlist_service::WishlistService::new(game_service.clone());
+        let wishlist_service = service::wishlist_service::WishlistService::new(game_service.clone(), &*db);
         let mut prefered_markets = HashSet::new();
         prefered_markets.insert("BR".to_string());
         prefered_markets.insert("AR".to_string());
@@ -149,9 +149,25 @@ mod tests{
             markets: prefered_markets
         };
 
-        let wishlist = crate::core::wishlist::Wishlist::new("45", wishlist_pref, &game_list);
-        wishlist_service.print_wishlist(&wishlist).await;
+        let wishlist = crate::core::wishlist::Wishlist::new("4778", wishlist_pref, &game_list);
+        wishlist_service.save(&wishlist).await;
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_wishlist() -> Result<(), Box<dyn std::error::Error>>{
+        let init_db_task = task::spawn(init_db());
+        let client = init_db_task.await??;
+        let db = Rc::new(client.database("xbWishlist"));
+        
+        let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
+        let game_service = Rc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone()));
+        let wishlist_service = service::wishlist_service::WishlistService::new(game_service.clone(), &*db);
+        
+        if let Some(wishlist) = wishlist_service.get_wishlist("477").await{
+            wishlist_service.print_wishlist(&wishlist).await;
+        }
 
         Ok(())
     }

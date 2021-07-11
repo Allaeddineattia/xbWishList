@@ -13,26 +13,45 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 use super::game_service::GameService;
-use crate::core::wishlist::Wishlist;
+use crate::{core::wishlist::Wishlist, repo::shared::Repo};
 use std::rc::Rc;
+use mongodb::Database;
+use crate::repo::wishlist_repo;
 pub struct WishlistService{
-    game_service: Rc<GameService>
+    game_service: Rc<GameService>,
+    wishlist_repo: wishlist_repo::WishlistRepo,
 }
 
 impl  WishlistService {
-    pub fn new(game_service: Rc<GameService>) -> Self{
+    pub fn new(game_service: Rc<GameService>, data_base : & Database) -> Self{
         WishlistService{
-            game_service
+            game_service,
+            wishlist_repo: wishlist_repo::WishlistRepo::new(data_base)
         }
     }
+
     pub async fn print_wishlist(&self, wishlist: &Wishlist){
-        let pref = wishlist.wishlist_preference();
+        let pref = wishlist.preference();
         for game in wishlist.games(){
 
             self.game_service.get_game_info(game.0, &pref.language, game.1.into_iter().map(|string|{
                 &string[..]
             }).collect()).await;
         }
+    }
+
+
+    pub async fn save(&self, wishlist: &Wishlist){
+        self.wishlist_repo.save(wishlist).await;
+        if let Some (wishlist_result) = self.wishlist_repo.fetch_by_name(&wishlist.name).await{
+            println!("Element saved correctly");
+        }else {
+            println!("couldn't save the file ")
+        }
+    } 
+
+    pub async fn get_wishlist(&self, name: &str) -> Option<Wishlist>{
+        self.wishlist_repo.fetch_by_name(name).await
     }
 }
 
