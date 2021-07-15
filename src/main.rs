@@ -13,15 +13,19 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+
+
 mod client;
 mod core;
 mod repo;
 mod service;
+mod controller;
 
 use tokio::task;
 use mongodb::{Client, options::ClientOptions};
 use std::rc::Rc;
 use crate::client::client_service::microsoft_api::{MicrosoftApiService, MARKETS};
+use actix_web::{get, App, Result, HttpResponse, HttpServer, web};
 
 async fn init_db() -> anyhow::Result<mongodb::Client>{
     let mut client_options = ClientOptions::parse("mongodb://localhost:27017").await?;
@@ -57,20 +61,51 @@ async fn send_req() -> Result<(), Box<dyn std::error::Error>>{
     Ok(())
 }
 
+use serde::{Deserialize, Serialize};
 
-fn main() {
+#[derive(Serialize, Deserialize)]
+struct MyObj {
+    name: String,
+}
+
+#[get("/stream")]
+async fn stream(data: web::Data<crate::controller::game_controller::GameController>) -> Result<HttpResponse> {
+   Ok(HttpResponse::Ok()
+        .content_type("application/json")
+        .json(
+            MyObj{
+                name: "hehi".to_string() + &data.tita
+            }
+        )
+    )
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    let c = web::Data::new(crate::controller::game_controller::GameController::new());
+    HttpServer::new(move || App::new().service(
+        web::scope("/game").app_data(c.clone()).route("/{query}", web::get().to(crate::controller::game_controller::GameController::search_game)))
+        .service(stream)
+    )
+        .bind("127.0.0.1:8080")?
+        .run()
+        .await
+}
+
+
+//fn main() {
     //let ids : Vec<String> = env::args().collect();// String::from("9MZ11KT5KLP6"),String::from("9PH339L3Z99C")
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    match rt.block_on(send_req()){
-        Ok(_) => {},
-        Err(_) =>{},
-    };
+    //let rt = tokio::runtime::Runtime::new().unwrap();
+    //match rt.block_on(send_req()){
+    //    Ok(_) => {},
+    //    Err(_) =>{},
+    //};
     
     //let result = game::send_request(ids).await?;
     //game::get_info_from_response(&result);
     //game::read_from_file();
     //Ok(())
-}
+//}
 
 
 #[cfg(test)]
@@ -172,5 +207,17 @@ mod tests{
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_search() -> Result<(), Box<dyn std::error::Error>>{
+        let init_db_task = task::spawn(init_db());
+        let client = init_db_task.await??;
+        let db = Rc::new(client.database("xbWishlist"));
+        
+        let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
+        let game_service = Rc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone()));
+        game_service.search_game("Devil may", "US").await;
+
+        Ok(())
+    }
 
 }

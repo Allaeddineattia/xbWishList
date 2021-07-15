@@ -301,6 +301,23 @@ impl GameService{
         }
     }
 
+    pub async fn search_game(&self, query: &str, language: &str){
+        let market = MARKETS.get(language);
+        if let Some(market) = market{
+            let result = MicrosoftApiService::search_games(query, &market.local(), &market.short_id()).await;
+            if let Ok(search_response) = result{
+                for item in search_response.results.iter(){
+                    for product in item.products.iter(){
+                        println!("product found \nid: {} \ntitle: {} \nimage url: {}", product.product_id, product.title, product.icon);
+                    } 
+                }
+            }
+        } else {
+            println!("language {} not supported", language);
+        }
+        
+    }
+
 }
 
 
