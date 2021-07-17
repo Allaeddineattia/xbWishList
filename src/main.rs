@@ -23,7 +23,6 @@ mod controller;
 
 use tokio::task;
 use mongodb::{Client, options::ClientOptions};
-use std::rc::Rc;
 use crate::client::client_service::microsoft_api::{MicrosoftApiService, MARKETS};
 use actix_web::{get, App, Result, HttpResponse, HttpServer, web};
 
@@ -47,9 +46,9 @@ async fn send_req() -> Result<(), Box<dyn std::error::Error>>{
                                         language, market.short_id()));// nier: bppzvt8bz15n //9PH339L3Z99C / fifa 9nn50lxzt18z / starwars c2csdtscbz0c
     let client = init_db_task.await??;
 
-    let db = Rc::new(client.database("xbWishlist"));
+    let db = Arc::new(client.database("xbWishlist"));
 
-    let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
+    let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
     let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
 
     let resp1 = task1.await??;
@@ -62,6 +61,7 @@ async fn send_req() -> Result<(), Box<dyn std::error::Error>>{
 }
 
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Serialize, Deserialize)]
 struct MyObj {
@@ -74,7 +74,7 @@ async fn stream(data: web::Data<crate::controller::game_controller::GameControll
         .content_type("application/json")
         .json(
             MyObj{
-                name: "hehi".to_string() + &data.tita
+                name: "hehi".to_string()
             }
         )
     )
@@ -82,15 +82,23 @@ async fn stream(data: web::Data<crate::controller::game_controller::GameControll
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let c = web::Data::new(crate::controller::game_controller::GameController::new());
-    HttpServer::new(move || App::new().service(
-        web::scope("/game").app_data(c.clone()).route("/{query}", web::get().to(crate::controller::game_controller::GameController::search_game)))
+
+    let client = init_db().await.unwrap();
+    let db = Arc::new(client.database("xbWishlist"));
+
+    let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
+    let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
+
+    let c = web::Data::new(crate::controller::game_controller::GameController::new(game_service));
+    HttpServer::new(move || App::new().service(crate::controller::game_controller::GameController::get_web_service(c.clone()))
         .service(stream)
     )
         .bind("127.0.0.1:8080")?
         .run()
         .await
 }
+
+
 
 
 //fn main() {
@@ -118,9 +126,9 @@ mod tests{
     async fn  test_game_get_info()-> Result<(), Box<dyn std::error::Error>>{
         let init_db_task = task::spawn(init_db());
         let client = init_db_task.await??;
-        let db = Rc::new(client.database("xbWishlist"));
+        let db = Arc::new(client.database("xbWishlist"));
         
-        let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
+        let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
         game_service.get_game_info("9PHKXB8RDKBC", "en-US", vec!["AR", "BR"]).await;
         Ok(())
@@ -129,9 +137,9 @@ mod tests{
     async fn test_game_ghost_runner()-> Result<(), Box<dyn std::error::Error>>{
         let init_db_task = task::spawn(init_db());
         let client = init_db_task.await??;
-        let db = Rc::new(client.database("xbWishlist"));
+        let db = Arc::new(client.database("xbWishlist"));
         
-        let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
+        let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
         game_service.get_game_info(&"9pdgwzpkcbt6".to_uppercase(), "en-US", vec!["AR", "BR"]).await;
         Ok(())
@@ -141,9 +149,9 @@ mod tests{
     async fn test_game_info()-> Result<(), Box<dyn std::error::Error>>{
         let init_db_task = task::spawn(init_db());
         let client = init_db_task.await??;
-        let db = Rc::new(client.database("xbWishlist"));
+        let db = Arc::new(client.database("xbWishlist"));
         
-        let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
+        let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
         game_service.get_game_info(&"c3jpd73r365s".to_uppercase(), "en-US", vec!["AR", "BR", "FR", "US", "NE"]).await;
         Ok(())
@@ -153,9 +161,9 @@ mod tests{
     async fn test_game_all_markets()-> Result<(), Box<dyn std::error::Error>>{
         let init_db_task = task::spawn(init_db());
         let client = init_db_task.await??;
-        let db = Rc::new(client.database("xbWishlist"));
+        let db = Arc::new(client.database("xbWishlist"));
         
-        let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
+        let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
         game_service.get_game_info("9MZ11KT5KLP6", "en-US", MARKETS.keys().copied().collect::<Vec<_>>()).await;
         Ok(())
@@ -164,10 +172,10 @@ mod tests{
     async fn test_wishlist() -> Result<(), Box<dyn std::error::Error>>{
         let init_db_task = task::spawn(init_db());
         let client = init_db_task.await??;
-        let db = Rc::new(client.database("xbWishlist"));
+        let db = Arc::new(client.database("xbWishlist"));
         
-        let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
-        let game_service = Rc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone()));
+        let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
+        let game_service = Arc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone()));
         let wishlist_service = service::wishlist_service::WishlistService::new(game_service.clone(), &*db);
         let mut prefered_markets = HashSet::new();
         prefered_markets.insert("BR".to_string());
@@ -194,13 +202,13 @@ mod tests{
     async fn test_get_wishlist() -> Result<(), Box<dyn std::error::Error>>{
         let init_db_task = task::spawn(init_db());
         let client = init_db_task.await??;
-        let db = Rc::new(client.database("xbWishlist"));
+        let db = Arc::new(client.database("xbWishlist"));
         
-        let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
-        let game_service = Rc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone()));
+        let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
+        let game_service = Arc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone()));
         let wishlist_service = service::wishlist_service::WishlistService::new(game_service.clone(), &*db);
         
-        if let Some(wishlist) = wishlist_service.get_wishlist("477").await{
+        if let Some(wishlist) = wishlist_service.get_wishlist("4778").await{
             wishlist_service.print_wishlist(&wishlist).await;
         }
 
@@ -211,10 +219,10 @@ mod tests{
     async fn test_search() -> Result<(), Box<dyn std::error::Error>>{
         let init_db_task = task::spawn(init_db());
         let client = init_db_task.await??;
-        let db = Rc::new(client.database("xbWishlist"));
+        let db = Arc::new(client.database("xbWishlist"));
         
-        let purchase_option_service = Rc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
-        let game_service = Rc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone()));
+        let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
+        let game_service = Arc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone()));
         game_service.search_game("Devil may", "US").await;
 
         Ok(())

@@ -18,13 +18,14 @@ use mongodb::Database;
 use crate::client::input_dto::catalog_response;
 use crate::core::purchase_option::{PurchaseAvailability};
 use crate::client::client_service::microsoft_api::XboxLiveLanguage;
+use std::sync::Arc;
 
 pub struct PurchaseOptionService {
-    db : Rc<Database>,
+    db : Arc<Database>,
 }
 
 impl PurchaseOptionService{
-    pub fn new(db: Rc<Database>) -> Self {
+    pub fn new(db: Arc<Database>) -> Self {
         PurchaseOptionService { db }
     }
 

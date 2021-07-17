@@ -29,16 +29,18 @@ use crate::service::purchase_option_service::PurchaseOptionService;
 use crate::core::game::Game;
 use crate::core::game::Property;
 use tokio::task;
+use std::sync::Arc;
+use crate::client::input_dto::search_response::{SearchItem, SearchItemProduct};
 
 pub struct GameService {
-    db : Rc<Database>,
-    purchase_option_service: Rc<PurchaseOptionService>,
+    db : Arc<Database>,
+    purchase_option_service: Arc<PurchaseOptionService>,
     game_repo: GameRepo,
 }
 
 impl GameService{
 
-    pub fn new(db: Rc<Database>, purchase_option_service: Rc<PurchaseOptionService>) -> Self {
+    pub fn new(db: Arc<Database>, purchase_option_service: Arc<PurchaseOptionService>) -> Self {
         GameService { 
             db: db.clone(), 
             purchase_option_service, 
@@ -235,7 +237,7 @@ impl GameService{
 
     }
 
-    pub async fn get_game_info(&self, id:&str , language: & str, markets: Vec<& str>) {
+    pub async fn get_game_info(&self, id:&str , language: & str, markets: Vec<& str>) -> Option<Game>{
         let id = &id.to_uppercase()[..];
         let mut description_is_cured = false;
         let mut missing_markets_are_cured = false;
@@ -244,7 +246,6 @@ impl GameService{
             let game = self.game_repo.fetch_game(id, language, &markets).await;
             match game{
                 FetchGame::ElementNotFound(error_message)=>{
-                    
                     println!("element is missing {} ", error_message);
                     if description_is_cured{
                         println!("no game found with this id {}", id);
@@ -264,12 +265,12 @@ impl GameService{
                 FetchGame::Fetched(game)=>{
                     println!("\n-----------------\n");
                     game.print_price();
-                    return;
+                    return Some(game);
                 }
                 FetchGame::MissingDescription(language)=>{
                     if description_is_cured{
                         println!("couldn't find a discription of game with id {} for language {}", id, language);
-                        return;
+                        return None;
                     };
                     self.cure_description_missing(id, language).await;
                     description_is_cured = true;
@@ -277,13 +278,14 @@ impl GameService{
                 FetchGame::MissingMarkets(missing_markets)=>{
                     if missing_markets_are_cured{
                         println!("the game with id {} is not supported in the following markets {:#?}", id, missing_markets);
-                        return;
+                        return None;
                     };
                     self.cure_markets_missing(id, &missing_markets).await;
                     missing_markets_are_cured = true;
                 }
             }
-        }
+        };
+        None
         
     }
 
@@ -301,20 +303,24 @@ impl GameService{
         }
     }
 
-    pub async fn search_game(&self, query: &str, language: &str){
+    pub async fn search_game(&self, query: &str, language: &str) -> Vec<SearchItemProduct> {
         let market = MARKETS.get(language);
+        let mut vec = Vec::<SearchItemProduct>::new();
         if let Some(market) = market{
             let result = MicrosoftApiService::search_games(query, &market.local(), &market.short_id()).await;
             if let Ok(search_response) = result{
-                for item in search_response.results.iter(){
-                    for product in item.products.iter(){
+                for item in search_response.results.into_iter(){
+                    for mut product in item.products.into_iter(){
+                        product.icon = "https:".to_string() + &product.icon;
                         println!("product found \nid: {} \ntitle: {} \nimage url: {}", product.product_id, product.title, product.icon);
-                    } 
+                        vec.push(product);
+                    }
                 }
             }
         } else {
             println!("language {} not supported", language);
         }
+        vec
         
     }
 

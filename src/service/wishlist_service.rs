@@ -17,13 +17,15 @@ use crate::{core::wishlist::Wishlist, repo::shared::Repo};
 use std::rc::Rc;
 use mongodb::Database;
 use crate::repo::wishlist_repo;
+use std::sync::Arc;
+
 pub struct WishlistService{
-    game_service: Rc<GameService>,
+    game_service: Arc<GameService>,
     wishlist_repo: wishlist_repo::WishlistRepo,
 }
 
 impl  WishlistService {
-    pub fn new(game_service: Rc<GameService>, data_base : & Database) -> Self{
+    pub fn new(game_service: Arc<GameService>, data_base : & Database) -> Self{
         WishlistService{
             game_service,
             wishlist_repo: wishlist_repo::WishlistRepo::new(data_base)
