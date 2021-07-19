@@ -24,20 +24,15 @@ use super::dto;
 use actix_web::client::JsonPayloadError;
 use std::error::Error;
 use actix_web::error::InternalError;
-
-#[derive(Serialize, Deserialize)]
-struct Obj {
-    name: String,
-}
-
+use std::sync::Arc;
 
 pub struct GameController{
-    game_service: GameService
+    game_service: Arc<GameService>
 }
 
 impl GameController {
 
-    pub fn new(game_service: GameService) -> Self {
+    pub fn new(game_service: Arc<GameService>) -> Self {
         GameController { game_service }
     }
 

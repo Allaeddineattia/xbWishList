@@ -87,10 +87,14 @@ async fn main() -> std::io::Result<()> {
     let db = Arc::new(client.database("xbWishlist"));
 
     let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
-    let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
+    let game_service = Arc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone()));
+    let wishlist_service =  Arc::new(service::wishlist_service::WishlistService::new(game_service.clone(), &*db));
 
-    let c = web::Data::new(crate::controller::game_controller::GameController::new(game_service));
-    HttpServer::new(move || App::new().service(crate::controller::game_controller::GameController::get_web_service(c.clone()))
+    let game_controller = web::Data::new(crate::controller::game_controller::GameController::new(game_service.clone()));
+    let wishlist_controller = web::Data::new(crate::controller::wishlist_controller::WishlistController::new(wishlist_service, game_service));
+    HttpServer::new(move || App::new()
+        .service(crate::controller::game_controller::GameController::get_web_service(game_controller.clone()))
+        .service(crate::controller::wishlist_controller::WishlistController::get_web_service(wishlist_controller.clone()))
         .service(stream)
     )
         .bind("127.0.0.1:8080")?
@@ -177,11 +181,11 @@ mod tests{
         let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = Arc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone()));
         let wishlist_service = service::wishlist_service::WishlistService::new(game_service.clone(), &*db);
-        let mut prefered_markets = HashSet::new();
-        prefered_markets.insert("BR".to_string());
-        prefered_markets.insert("AR".to_string());
-        prefered_markets.insert("US".to_string());
-        prefered_markets.insert("FR".to_string());
+        let mut preferred_markets = HashSet::new();
+        preferred_markets.insert("BR".to_string());
+        preferred_markets.insert("AR".to_string());
+        preferred_markets.insert("US".to_string());
+        preferred_markets.insert("FR".to_string());
 
         let mut game_list = Vec::<(&str, Option<HashSet<&str>>)>::new();
         game_list.push(("9MZ11KT5KLP6", None));
@@ -189,7 +193,7 @@ mod tests{
 
         let wishlist_pref = crate::core::wishlist::WishlistPreferences{
             language: "en-US".to_string(),
-            markets: prefered_markets
+            markets: preferred_markets
         };
 
         let wishlist = crate::core::wishlist::Wishlist::new("4778", wishlist_pref, &game_list);
