@@ -14,30 +14,99 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 use std::collections::HashSet;
-use crate::client::client_service::microsoft_api::{MARKETS};
+use crate::client::client_service::microsoft_api::{MARKETS, XboxLiveLanguage};
+use crate::core::game::Game;
 
-pub struct WishlistPreferences{
-    pub language: String,
-    pub markets: HashSet<String>
-}
-impl WishlistPreferences{
-    pub fn markets(&self) -> Vec<&str>{
-        self.markets.iter().map(|s|{&s[..]}).collect()
-    }
+pub struct Wishlist{
+    pub name: String,
+    pub games: Vec<WishlistElement>,
+    pub preference: WishlistPreferences,
 }
 
 pub struct WishlistElement{
+    pub game: Game,
+    pub markets: Markets
+}
 
-    pub game_id: String,
-    pub markets: HashSet<String>
+pub struct WishlistPreferences{
+    pub language: String,
+    pub markets: Markets
+}
+
+#[derive(Clone)]
+pub struct Markets{
+    markets: HashSet<String>,
+}
+
+impl Wishlist {
+    pub fn new(name: String,  preference: WishlistPreferences, games: Vec<WishlistElement>) -> Self{
+        Wishlist{
+            name,
+            games,
+            preference,
+        }
+    }
+
+    pub fn games(&self) -> Vec<(&str, Vec<&str>)>{
+        self.games.iter().map(|element|{
+            return if element.markets.to_vec().is_empty() {
+                (element.game.id(), self.preference.markets.to_vec())
+            } else {
+                (element.game.id(), element.markets.to_vec())
+            }
+        }).collect()
+    }
+
+    pub fn preference(&self) -> &WishlistPreferences{
+        &self.preference
+    }
 }
 
 impl WishlistElement {
-
-    pub fn new(game_id: String, markets: HashSet<String>)-> Self{
+    pub fn new(game: Game, markets: Markets)-> Self{
         WishlistElement{
-            game_id,
+            game,
             markets
+        }
+    }
+    pub fn markets(&self) -> Vec<&str>{
+        self.markets.to_vec()
+    }
+}
+
+impl WishlistPreferences{
+    pub fn new(language: String, markets: Markets) -> Self {
+        WishlistPreferences { language, markets}
+    }
+
+    pub fn markets(&self) -> Vec<&str>{
+        self.markets.to_vec()
+    }
+
+}
+
+impl Markets{
+    pub fn from_vec_str(markets: Vec<String>) -> (Self, Vec<String>)//(Markets, InvalidMarkets)
+    {
+        let mut markets_hash = HashSet::<String>::new();
+        let mut invalid_markets = Vec::<String>::new();
+        for market in markets{
+            let market_opt = MARKETS.get(&market);
+            if let Some(_) = market_opt{
+                markets_hash.insert(market);
+            }else {
+                invalid_markets.push(market);
+            }
+        }
+        let markets = Self{
+            markets: markets_hash
+        };
+        (markets, invalid_markets)
+    }
+
+    pub fn new()->Self{
+        Self{
+            markets: HashSet::<String>::new()
         }
     }
 
@@ -48,60 +117,14 @@ impl WishlistElement {
         }else {
             println!("market <{}> is not supported", market);
         }
-        
+    }
+
+    pub fn to_vec(&self) -> Vec<&str>{
+        self.markets.iter().map(|s|{&s[..]}).collect()
     }
 
     pub fn remove_market(&mut self, market: &str) -> bool{
         self.markets.remove(market)
     }
 
-    pub fn set_markets(&mut self, markets: HashSet<String>){
-        self.markets = markets;
-    }
-
-    pub fn markets(&self) -> Vec<&str>{
-        self.markets.iter().map(|s|{&s[..]}).collect()
-    }
-
-}
-
-pub struct Wishlist{
-    pub name: String,
-    pub games: Vec<WishlistElement>,
-    pub preference: WishlistPreferences, 
-}
-
-impl Wishlist {
-    pub fn new(name: &str,  preference: WishlistPreferences, games: &Vec<(&str, Option<HashSet<&str>>)>) -> Self{
-        let mut game_list = Vec::<WishlistElement>::new();
-
-        for game in games{
-            let mut markets : HashSet<String> = HashSet::new();
-            if let Some(markets_str) = &game.1{
-                markets = markets_str.into_iter().map(|market_str|{
-                    market_str.to_string()
-                }).collect();
-            }
-            game_list.push(WishlistElement::new(game.0.to_string(), markets));
-        }
-
-        Wishlist{
-            name: name.to_string(),
-            games: game_list,
-            preference, 
-        }
-    }
-    pub fn games(&self) -> Vec<(&str, &HashSet<String>)>{
-        self.games.iter().map(|element|{
-            if element.markets.is_empty(){
-                return (&element.game_id[..], &self.preference.markets);
-            }else{
-                return (&element.game_id[..], &element.markets);
-            }
-        }).collect()
-    }
-
-    pub fn preference(&self) -> &WishlistPreferences{
-        &self.preference
-    }
 }

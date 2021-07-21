@@ -21,15 +21,13 @@ use std::sync::Arc;
 
 pub struct WishlistService{
     game_service: Arc<GameService>,
-    wishlist_repo: wishlist_repo::WishlistRepo,
+    wishlist_repo: Arc<wishlist_repo::WishlistRepo>,
 }
 
 impl  WishlistService {
-    pub fn new(game_service: Arc<GameService>, data_base : & Database) -> Self{
-        WishlistService{
-            game_service,
-            wishlist_repo: wishlist_repo::WishlistRepo::new(data_base)
-        }
+
+    pub fn new(game_service: Arc<GameService>, wishlist_repo: Arc<wishlist_repo::WishlistRepo>) -> Self {
+        WishlistService { game_service, wishlist_repo }
     }
 
     pub async fn print_wishlist(&self, wishlist: &Wishlist){
@@ -44,7 +42,7 @@ impl  WishlistService {
 
 
     pub async fn save(&self, wishlist: &Wishlist){
-        self.wishlist_repo.save(wishlist).await;
+        self.wishlist_repo.save_wishlist(wishlist).await;
         if let Some (wishlist_result) = self.wishlist_repo.fetch_by_name(&wishlist.name).await{
             println!("Element saved correctly");
         }else {
@@ -55,5 +53,6 @@ impl  WishlistService {
     pub async fn get_wishlist(&self, name: &str) -> Option<Wishlist>{
         self.wishlist_repo.fetch_by_name(name).await
     }
+
 }
 

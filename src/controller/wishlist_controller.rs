@@ -5,6 +5,7 @@ use actix_web::{Responder, web, HttpResponse, Scope};
 use std::collections::HashSet;
 use std::borrow::Borrow;
 use crate::service::game_service::GameService;
+use crate::core::wishlist::{Markets, WishlistElement};
 
 pub struct WishlistController{
     wishlist_service: Arc<WishlistService>,
@@ -18,44 +19,45 @@ impl WishlistController{
 
     // Post /create
     pub async fn create_wishlist(form: web::Json<dto::input::CreateWishlist>, data: web::Data<WishlistController>) -> impl Responder {
-        let mut preferred_markets = HashSet::<String>::new();
-        for market in form.markets.iter(){
-            preferred_markets.insert(market.clone());
-        }
-        let mut game_list = Vec::<(&str, Option<HashSet<&str>>)>::new();
-        for game in form.games.iter(){
-            if let Some(markets) = &game.markets{
-                let mut preferred_markets = HashSet::<(&str)>::new();
-                for market in markets.into_iter(){
-                    preferred_markets.insert(market);
-                }
-                game_list.push((&game.id, Some(preferred_markets)));
+        let dto = form.into_inner();
+        let mut preferred_markets = Markets::from_vec_str(dto.markets).0;
+        let mut game_list = Vec::<WishlistElement>::new();
+
+        for game_dto in dto.games.into_iter(){
+            let mut markets;
+            if let Some(markets_list) = game_dto.markets{
+                markets = Markets::from_vec_str(markets_list).0;
             }else{
-                game_list.push((&game.id, None));
+                markets = preferred_markets.clone();
             }
-        }
+            let game = data.game_service.get_game_info(&game_dto.id, &dto.language, markets.to_vec()).await;
+            if let Some(game) = game{
+                game_list.push(WishlistElement::new(game,markets))
+            }else{
+                let error_message = "couldn't get game with id ".to_string() + &game_dto.id;
+                return HttpResponse::BadRequest()
+                    .body(&error_message);
+            }
+        };
 
         let wishlist_pref = crate::core::wishlist::WishlistPreferences{
-            language: form.language.clone(),
+            language: dto.language,
             markets: preferred_markets
         };
 
-        let wishlist = crate::core::wishlist::Wishlist::new(&form.name , wishlist_pref, &game_list);
+        let wishlist = crate::core::wishlist::Wishlist::new(dto.name , wishlist_pref, game_list);
         data.wishlist_service.save(&wishlist).await;
         HttpResponse::Ok()
-            .content_type("application/json")
-            .json(
-                form.into_inner()
-            )
+            .body("created")
     }
 
-    async fn get_wishlist_games(&self, vec : Vec<(&str, &HashSet<String>)>, language:&str)->Vec<dto::output::wishlist_info::WishlistInfoElement>{
+    async fn get_wishlist_games(&self, vec : Vec<(&str, Vec<&str>)>, language:&str)->Vec<dto::output::wishlist_info::WishlistInfoElement>{
         let mut result = Vec::<dto::output::wishlist_info::WishlistInfoElement>::new();
         for pair in vec.into_iter(){
             let game = self.game_service.get_game_info(pair.0, language, pair.1.iter().map(|s|{&s[..]}).collect()).await.unwrap();
             let game_info = dto::output::wishlist_info::WishlistInfoElement{
                 game: dto::output::GameInfo::new(game),
-                markets: pair.1.iter().map(|s|{s.clone()}).collect()
+                markets: pair.1.iter().map(|s|{s.to_string()}).collect()
             };
             result.push(game_info);
         };

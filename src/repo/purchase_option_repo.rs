@@ -15,12 +15,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::core::purchase_option::PurchaseAvailability;
 use mongodb::bson::{doc,Document};
-use super::shared::MongoEntity;
 use chrono::{DateTime, Utc};
+use crate::repo::shared::{MongoEntityRepo, MongoEntity};
 
-impl MongoEntity for PurchaseAvailability {
-    fn to_document(&self) -> Document{
+pub struct PurchaseAvailabilityRepo;
 
+impl PurchaseAvailabilityRepo{
+    pub fn new() -> Self {
+        PurchaseAvailabilityRepo {}
+    }
+}
+
+impl MongoEntity for PurchaseAvailability{
+    fn to_document(&self) -> Document {
         doc!{
             "id" : &self.id,
             "sale_state" : self.sale_state_string(),
@@ -31,11 +38,9 @@ impl MongoEntity for PurchaseAvailability {
             "start_date": self.start_date,
             "end_date": self.end_date,
         }
-
     }
 
-    
-    fn create_from_document(doc : &Document) -> Self{
+    fn from_document(doc: &Document) -> PurchaseAvailability {
         let id = String::from(doc.get_str("id").unwrap());
         let sale_state = Self::get_sale_state(doc.get_str("sale_state").unwrap());
         let original_price = doc.get_f64("original_price").unwrap();
@@ -55,5 +60,4 @@ impl MongoEntity for PurchaseAvailability {
             end_date,
         }
     }
-
 }

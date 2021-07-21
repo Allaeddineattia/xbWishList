@@ -33,35 +33,11 @@ async fn init_db() -> anyhow::Result<mongodb::Client>{
 }
 
 
-async fn send_req() -> Result<(), Box<dyn std::error::Error>>{
-    let init_db_task = task::spawn(init_db());
-    let language = client::client_service::microsoft_api::UNITED_STATES.local();
-    let market = &client::client_service::microsoft_api::ARGENTINA;
-    let task1 = task::spawn(
-        MicrosoftApiService::get_games(vec!["9nn50lxzt18z".to_string(), "9phkxb8rdkbc".to_string()],
-                                       language,market.short_id() ));
-
-    let task2 = task::spawn(
-        MicrosoftApiService::get_games(vec!["9n2zdn7nwqkv".to_string(), "9ph339l3z99c".to_string()],
-                                        language, market.short_id()));// nier: bppzvt8bz15n //9PH339L3Z99C / fifa 9nn50lxzt18z / starwars c2csdtscbz0c
-    let client = init_db_task.await??;
-
-    let db = Arc::new(client.database("xbWishlist"));
-
-    let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
-    let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
-
-    let resp1 = task1.await??;
-    let resp2 = task2.await??;
-    game_service.get_info_from_response(&resp1, language, market).await?;
-    game_service.get_info_from_response(&resp2, language, market).await?;
-
-
-    Ok(())
-}
-
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use crate::repo::game_repo::GameRepo;
+use crate::repo::purchase_option_repo::PurchaseAvailabilityRepo;
+use crate::repo::wishlist_repo::WishlistRepo;
 
 #[derive(Serialize, Deserialize)]
 struct MyObj {
@@ -85,10 +61,13 @@ async fn main() -> std::io::Result<()> {
 
     let client = init_db().await.unwrap();
     let db = Arc::new(client.database("xbWishlist"));
+    let purchase_repo = PurchaseAvailabilityRepo::new();
+    let game_repo = Arc::new(GameRepo::new(&db,purchase_repo));
+    let wishlist_repo = Arc::new(WishlistRepo::new(&db, game_repo.clone()));
 
     let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
-    let game_service = Arc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone()));
-    let wishlist_service =  Arc::new(service::wishlist_service::WishlistService::new(game_service.clone(), &*db));
+    let game_service = Arc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone(), game_repo.clone()));
+    let wishlist_service =  Arc::new(service::wishlist_service::WishlistService::new(game_service.clone(), wishlist_repo));
 
     let game_controller = web::Data::new(crate::controller::game_controller::GameController::new(game_service.clone()));
     let wishlist_controller = web::Data::new(crate::controller::wishlist_controller::WishlistController::new(wishlist_service, game_service));
@@ -125,15 +104,19 @@ mod tests{
     use std::collections::HashSet;
 
     use super::*;
+    use crate::core::wishlist::Markets;
 
     #[tokio::test]
     async fn  test_game_get_info()-> Result<(), Box<dyn std::error::Error>>{
         let init_db_task = task::spawn(init_db());
         let client = init_db_task.await??;
         let db = Arc::new(client.database("xbWishlist"));
-        
+        let purchase_repo = PurchaseAvailabilityRepo::new();
+        let game_repo = Arc::new(GameRepo::new(&db,purchase_repo));
+
+
         let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
-        let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
+        let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone(), game_repo.clone());
         game_service.get_game_info("9PHKXB8RDKBC", "en-US", vec!["AR", "BR"]).await;
         Ok(())
     }
@@ -142,9 +125,12 @@ mod tests{
         let init_db_task = task::spawn(init_db());
         let client = init_db_task.await??;
         let db = Arc::new(client.database("xbWishlist"));
-        
+        let purchase_repo = PurchaseAvailabilityRepo::new();
+        let game_repo = Arc::new(GameRepo::new(&db,purchase_repo));
+
+
         let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
-        let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
+        let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone(), game_repo.clone());
         game_service.get_game_info(&"9pdgwzpkcbt6".to_uppercase(), "en-US", vec!["AR", "BR"]).await;
         Ok(())
     }
@@ -154,9 +140,11 @@ mod tests{
         let init_db_task = task::spawn(init_db());
         let client = init_db_task.await??;
         let db = Arc::new(client.database("xbWishlist"));
-        
+        let purchase_repo = PurchaseAvailabilityRepo::new();
+        let game_repo = Arc::new(GameRepo::new(&db,purchase_repo));
+
         let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
-        let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
+        let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone(), game_repo.clone());
         game_service.get_game_info(&"c3jpd73r365s".to_uppercase(), "en-US", vec!["AR", "BR", "FR", "US", "NE"]).await;
         Ok(())
     }
@@ -166,26 +154,31 @@ mod tests{
         let init_db_task = task::spawn(init_db());
         let client = init_db_task.await??;
         let db = Arc::new(client.database("xbWishlist"));
-        
+        let purchase_repo = PurchaseAvailabilityRepo::new();
+        let game_repo = Arc::new(GameRepo::new(&db,purchase_repo));
+
         let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
-        let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone());
+        let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone(), game_repo.clone());
         game_service.get_game_info("9MZ11KT5KLP6", "en-US", MARKETS.keys().copied().collect::<Vec<_>>()).await;
         Ok(())
     }
+    /*
     #[tokio::test]
     async fn test_wishlist() -> Result<(), Box<dyn std::error::Error>>{
         let init_db_task = task::spawn(init_db());
         let client = init_db_task.await??;
         let db = Arc::new(client.database("xbWishlist"));
-        
+        let purchase_repo = PurchaseAvailabilityRepo::new();
+        let game_repo = Arc::new(GameRepo::new(&db,purchase_repo));
+
         let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
-        let game_service = Arc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone()));
+        let game_service = Arc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone(),game_repo.clone()));
         let wishlist_service = service::wishlist_service::WishlistService::new(game_service.clone(), &*db);
-        let mut preferred_markets = HashSet::new();
-        preferred_markets.insert("BR".to_string());
-        preferred_markets.insert("AR".to_string());
-        preferred_markets.insert("US".to_string());
-        preferred_markets.insert("FR".to_string());
+        let mut preferred_markets = Markets::new();
+        preferred_markets.add_market("BR".to_string());
+        preferred_markets.add_market("AR".to_string());
+        preferred_markets.add_market("US".to_string());
+        preferred_markets.add_market("FR".to_string());
 
         let mut game_list = Vec::<(&str, Option<HashSet<&str>>)>::new();
         game_list.push(("9MZ11KT5KLP6", None));
@@ -196,7 +189,7 @@ mod tests{
             markets: preferred_markets
         };
 
-        let wishlist = crate::core::wishlist::Wishlist::new("4778", wishlist_pref, &game_list);
+        let wishlist = crate::core::wishlist::Wishlist::new("4778".to_string(), wishlist_pref, &game_list);
         wishlist_service.save(&wishlist).await;
 
         Ok(())
@@ -207,11 +200,11 @@ mod tests{
         let init_db_task = task::spawn(init_db());
         let client = init_db_task.await??;
         let db = Arc::new(client.database("xbWishlist"));
-        
+
         let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = Arc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone()));
         let wishlist_service = service::wishlist_service::WishlistService::new(game_service.clone(), &*db);
-        
+
         if let Some(wishlist) = wishlist_service.get_wishlist("4778").await{
             wishlist_service.print_wishlist(&wishlist).await;
         }
@@ -224,12 +217,12 @@ mod tests{
         let init_db_task = task::spawn(init_db());
         let client = init_db_task.await??;
         let db = Arc::new(client.database("xbWishlist"));
-        
+
         let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = Arc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone()));
         game_service.search_game("Devil may", "US").await;
 
         Ok(())
     }
-
+*/
 }

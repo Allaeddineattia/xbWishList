@@ -19,7 +19,7 @@ use crate::core::game;
 use crate::repo::shared::MongoEntity;
 use crate::repo::shared::Repo;
 use mongodb::Database;
-use crate::repo::game_repo::{GameRepo, GameEntity, FetchGame};
+use crate::repo::game_repo::{GameRepo, GameEntity};
 use std::collections::HashMap;
 use std::future::Future;
 use std::rc::Rc;
@@ -31,20 +31,22 @@ use crate::core::game::Property;
 use tokio::task;
 use std::sync::Arc;
 use crate::client::input_dto::search_response::{SearchItem, SearchItemProduct};
+use crate::client::input_dto::catalog_response::Response;
+use crate::repo::models::game_model::{FetchGame, GameModel};
 
 pub struct GameService {
     db : Arc<Database>,
     purchase_option_service: Arc<PurchaseOptionService>,
-    game_repo: GameRepo,
+    game_repo: Arc<GameRepo>,
 }
 
 impl GameService{
 
-    pub fn new(db: Arc<Database>, purchase_option_service: Arc<PurchaseOptionService>) -> Self {
+    pub fn new(db: Arc<Database>, purchase_option_service: Arc<PurchaseOptionService>, game_repo: Arc<GameRepo>) -> Self {
         GameService { 
             db: db.clone(), 
             purchase_option_service, 
-            game_repo:GameRepo::new(&*db),
+            game_repo,
         }
     }
 
@@ -182,27 +184,22 @@ impl GameService{
     }
 
     pub async fn save_game(&self, game:&Game){
-        let mut game_entity: GameEntity;
+        let mut game_entity: GameModel;
         let fetch_result = self.game_repo.fetch_by_id(game.id()).await;
         if let Some(entity) = fetch_result{
             game_entity = entity;
         }else{
-            game_entity = GameEntity::new(game.id());
+            game_entity = GameModel::new(game.id());
         }
         game_entity.add_info(game);
         self.game_repo.save(&game_entity).await;
     }
 
-    pub async fn get_info_from_response( &self, result: &catalog_response::Response, language: & str, market: &  XboxLiveLanguage::<'static>) -> anyhow::Result<()>
+    pub async fn save_response(&self, result: &catalog_response::Response, language: & str, market: &  XboxLiveLanguage::<'static>) -> anyhow::Result<()>
     {
         for product in result.products.iter(){
             let result: game::Game = self.abstract_product_to_game(product, language, market);
             self.save_game(&result).await;
-
-            //self.game_repo.save(&result).await;
-            let result = self.game_repo.fetch_by_id(result.id()).await;
-            let result = result.unwrap();
-            result.print();
         }
         Ok(())
     }
@@ -212,7 +209,7 @@ impl GameService{
         let market = & crate::client::client_service::microsoft_api::UNITED_STATES;
         let result = MicrosoftApiService::get_games(vec![id.to_string()], language, market.short_id()).await;
         if let Ok(result) = result{
-            self.get_info_from_response(&result, language, &market).await;
+            self.save_response(&result, language, &market).await;
         }
 
     }
@@ -231,7 +228,7 @@ impl GameService{
 
         for task_to_join in tasks{
             let result = task_to_join.1.await.unwrap().unwrap();
-            self.get_info_from_response(&result, task_to_join.0.local(), task_to_join.0).await;
+            self.save_response(&result, task_to_join.0.local(), task_to_join.0).await;
             
         }
 
@@ -298,7 +295,7 @@ impl GameService{
         }
         for task_to_join in tasks{
             let result = task_to_join.1.await.unwrap().unwrap();
-            self.get_info_from_response(&result, task_to_join.0.local(), task_to_join.0).await;
+            self.save_response(&result, task_to_join.0.local(), task_to_join.0).await;
             
         }
     }
