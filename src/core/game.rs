@@ -91,9 +91,6 @@ impl PurchaseOption{
 
 }
 
-
-
-
 pub struct Game{
     id: String,
     game_description: (String, GameDescription),

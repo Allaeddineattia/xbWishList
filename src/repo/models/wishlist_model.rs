@@ -9,7 +9,7 @@ pub struct WishlistModel{
 
 pub struct WishlistElementModel{
     pub game_id: String,
-    pub markets: Option<Vec<String>>
+    pub markets: Vec<String>
 }
 
 pub struct WishlistPreferencesModel{
@@ -59,23 +59,19 @@ impl UniqueEntity for WishlistModel{
 
 impl MongoEntity for WishlistElementModel{
     fn to_document(&self) -> Document {
-        if let Some(markets) = &self.markets{
-            doc!{
+
+
+        doc!{
             "game_id": &self.game_id,
-            "markets": markets,
+            "markets": &self.markets,
             }
-        }else {
-            doc!{
-            "game_id": &self.game_id
-            }
-        }
 
     }
 
     fn from_document(doc: &Document) -> Self {
         let game_id = String::from(doc.get_str("game_id").unwrap());
+        let mut markets= Vec::<String>::new();
         if let Ok(markets_database) = doc.get_array("markets") {
-            let mut markets= Vec::<String>::new();
             for bson in markets_database.into_iter(){
                 match bson{
                     Bson::String(market)=>{
@@ -84,15 +80,10 @@ impl MongoEntity for WishlistElementModel{
                     _ =>{}
                 }
             }
-            Self{
-                game_id,
-                markets: Some(markets)
-            }
-        }else {
-            Self{
-                game_id,
-                markets: None
-            }
+        }
+        Self{
+            game_id,
+            markets
         }
     }
 }

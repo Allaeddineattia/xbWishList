@@ -13,13 +13,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use crate::client::client_service::microsoft_api::{MARKETS, XboxLiveLanguage};
 use crate::core::game::Game;
 
 pub struct Wishlist{
     pub name: String,
-    pub games: Vec<WishlistElement>,
+    pub games: HashMap<String, WishlistElement>,
     pub preference: WishlistPreferences,
 }
 
@@ -30,7 +30,7 @@ pub struct WishlistElement{
 
 pub struct WishlistPreferences{
     pub language: String,
-    pub markets: Markets
+    pub markets_by_default: Markets
 }
 
 #[derive(Clone)]
@@ -38,8 +38,9 @@ pub struct Markets{
     markets: HashSet<String>,
 }
 
+
 impl Wishlist {
-    pub fn new(name: String,  preference: WishlistPreferences, games: Vec<WishlistElement>) -> Self{
+    pub fn new(name: String,  preference: WishlistPreferences, games: HashMap<String, WishlistElement>) -> Self{
         Wishlist{
             name,
             games,
@@ -49,12 +50,39 @@ impl Wishlist {
 
     pub fn games(&self) -> Vec<(&str, Vec<&str>)>{
         self.games.iter().map(|element|{
-            return if element.markets.to_vec().is_empty() {
-                (element.game.id(), self.preference.markets.to_vec())
-            } else {
-                (element.game.id(), element.markets.to_vec())
-            }
+            (&element.0[..], element.1.markets.to_vec())
         }).collect()
+    }
+
+    pub fn add_a_game(& mut self, game: Game, markets: Option<Markets>) -> bool{
+        let existing_game = self.games.get_mut(game.id());
+        return if let Some(existing_game) = existing_game {
+            if let Some(markets) = markets {
+                if markets.equal(&existing_game.markets) {
+                    return false;
+                }
+                existing_game.markets = markets;
+                return true;
+            }
+            false
+        } else {
+            let mut game_markets: Markets;
+            if let Some(markets) = markets {
+                game_markets = markets;
+            } else {
+                game_markets = self.preference.markets_by_default.clone();
+            }
+            let element = WishlistElement::new(game, game_markets);
+            self.games.insert(element.game.id().to_string(), element);
+            true
+        }
+    }
+
+    pub fn remove_a_game(&mut self, game_id:&str) -> bool{
+        match  self.games.remove(game_id){
+            None => {false}
+            Some(_) => {true}
+        }
     }
 
     pub fn preference(&self) -> &WishlistPreferences{
@@ -75,12 +103,12 @@ impl WishlistElement {
 }
 
 impl WishlistPreferences{
-    pub fn new(language: String, markets: Markets) -> Self {
-        WishlistPreferences { language, markets}
+    pub fn new(language: String, markets_by_default: Markets) -> Self {
+        WishlistPreferences { language, markets_by_default }
     }
 
     pub fn markets(&self) -> Vec<&str>{
-        self.markets.to_vec()
+        self.markets_by_default.to_vec()
     }
 
 }
@@ -117,6 +145,10 @@ impl Markets{
         }else {
             println!("market <{}> is not supported", market);
         }
+    }
+
+    pub fn equal(&self,  rhs: &Self) -> bool{
+        self.markets == rhs.markets
     }
 
     pub fn to_vec(&self) -> Vec<&str>{

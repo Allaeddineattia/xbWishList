@@ -48,11 +48,11 @@ impl WishlistRepo {
 
     async fn convert_model_to_entity(&self, model: wishlist_model::WishlistModel) -> wishlist::Wishlist{
         let preference = self.convert_model_wishlist_preferences(model.preference);
-        let mut wishlist_elements = Vec::<WishlistElement>::new();
+        let mut wishlist_elements = HashMap::<String, WishlistElement>::new();
         for wishlist_element_model in model.games.into_iter(){
             let wishlist_element = self.convert_model_to_wishlist_element(wishlist_element_model, &preference).await;
             if let Some(wishlist_element) = wishlist_element{
-                wishlist_elements.push(wishlist_element);
+                wishlist_elements.insert(wishlist_element.game.id().to_string(),wishlist_element);
             }else {
                 // make sure to treat when a game is missing
             }
@@ -69,14 +69,7 @@ impl WishlistRepo {
     async fn convert_model_to_wishlist_element(&self, model: wishlist_model::WishlistElementModel, pref: &wishlist::WishlistPreferences)-> Option<wishlist::WishlistElement>{
         let game_id = &model.game_id;
         let language = &pref.language;
-        let markets: Markets;
-        if let Some(market_list) = model.markets{
-            markets = Markets::from_vec_str(market_list).0;
-        }else{
-            markets = Markets::from_vec_str(pref.markets.to_vec().iter().map(
-                |str|{str.to_string()}
-            ).collect()).0;
-        };
+        let markets: Markets = Markets::from_vec_str(model.markets).0;
 
         let fetch = self.game_repo.fetch_game(game_id, language, &markets.to_vec()).await;
 
@@ -114,7 +107,7 @@ impl WishlistRepo {
     fn entity_to_model(&self, wishlist: &wishlist::Wishlist) -> WishlistModel{
         WishlistModel{
             name: wishlist.name.clone(),
-            games: wishlist.games.iter().map(|x|{self.element_entity_to_model(x)}).collect(),
+            games: wishlist.games.iter().map(|x|{self.element_entity_to_model(x.1)}).collect(),
             preference: self.preference_entity_to_model(wishlist.preference())
         }
     }
@@ -122,15 +115,15 @@ impl WishlistRepo {
     fn preference_entity_to_model(&self, wishlist_preferences: &wishlist::WishlistPreferences) -> WishlistPreferencesModel{
         WishlistPreferencesModel{
             language: wishlist_preferences.language.clone(),
-            markets: wishlist_preferences.markets.to_vec().iter().map(|str|{str.to_string()}).collect()
+            markets: wishlist_preferences.markets().to_vec().iter().map(|str|{str.to_string()}).collect()
         }
     }
 
     fn element_entity_to_model(&self, wishlist_element: &wishlist::WishlistElement) -> WishlistElementModel{
         let markets_vec = wishlist_element.markets.to_vec();
-        let mut markets: Option<Vec<String>> = None;
+        let mut markets = Vec::<String>::new();
         if !markets_vec.is_empty(){
-            markets = Some(markets_vec.iter().map(|str|{str.to_string()}).collect());
+            markets = markets_vec.iter().map(|str|{str.to_string()}).collect();
         };
         WishlistElementModel{
             game_id: wishlist_element.game.id().to_string(),
