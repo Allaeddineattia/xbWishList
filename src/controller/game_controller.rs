@@ -15,15 +15,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 
-use serde::{Deserialize, Serialize};
-
 use actix_web::{get, HttpResponse, web, Responder, Scope, HttpRequest, error};
 use crate::service::game_service::GameService;
-use std::rc::Rc;
 use super::dto;
-use actix_web::client::JsonPayloadError;
-use std::error::Error;
-use actix_web::error::InternalError;
 use std::sync::Arc;
 
 pub struct GameController{

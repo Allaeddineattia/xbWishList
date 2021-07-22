@@ -14,16 +14,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 use crate::{core::wishlist, repo::shared::Repo};
-use mongodb::bson::{doc, Document, Bson};
-use super::shared;
+use mongodb::bson::{doc};
 
 use std::collections::{HashMap, HashSet};
 use mongodb::{Collection, Database};
-use crate::core::wishlist::{Wishlist, WishlistElement, Markets};
+use crate::core::wishlist::{ WishlistElement, Markets};
 use std::sync::Arc;
 use crate::repo::game_repo::GameRepo;
 use crate::repo::models::wishlist_model;
-use crate::core::game::Game;
 use crate::repo::models::wishlist_model::{WishlistModel, WishlistElementModel, WishlistPreferencesModel};
 use crate::repo::models::game_model::FetchGame;
 

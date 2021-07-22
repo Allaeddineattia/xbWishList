@@ -5,7 +5,7 @@ use actix_web::{Responder, web, HttpResponse, Scope};
 use std::collections::{HashSet, HashMap};
 use std::borrow::Borrow;
 use crate::service::game_service::GameService;
-use crate::core::wishlist::{Markets, WishlistElement};
+use crate::core::wishlist::{Markets, Wishlist, WishlistElement};
 
 pub struct WishlistController{
     wishlist_service: Arc<WishlistService>,
@@ -32,7 +32,7 @@ impl WishlistController{
             }
             let game = data.game_service.get_game_info(&game_dto.id, &dto.language, markets.to_vec()).await;
             if let Some(game) = game{
-                if let Some(game_exists) = game_list.insert(game.id().to_string(),WishlistElement::new(game,markets)){
+                if let Some(_) = game_list.insert(game.id().to_string(),WishlistElement::new(game,markets)){
                     let error_message = "game with id ".to_string() + &game_dto.id +
                         " is redundant please make sure it's present only once";
                     return HttpResponse::BadRequest()
@@ -52,8 +52,18 @@ impl WishlistController{
 
         let wishlist = crate::core::wishlist::Wishlist::new(dto.name , wishlist_pref, game_list);
         data.wishlist_service.save(&wishlist).await;
-        HttpResponse::Ok()
-            .body("created")
+        if let Some(wishlist) = data.wishlist_service.get_wishlist(&wishlist.name).await{
+            return HttpResponse::Created()
+            .content_type("application/json")
+            .json(
+                Self::entity_to_dto(wishlist)
+            )
+        }else {
+            return HttpResponse::InternalServerError()
+            .json(
+                "could not fetch wishlist "
+            )
+        }
     }
 
     async fn get_wishlist_games(&self, vec : Vec<(&str, Vec<&str>)>, language:&str)->Vec<dto::output::wishlist_info::WishlistInfoElement>{
@@ -69,23 +79,20 @@ impl WishlistController{
         result
     }
 
+    //get //{name}
     pub async fn get_wishlist(web::Path((name)): web::Path<(String)>, data: web::Data<WishlistController>)-> impl Responder{
         let result = data.wishlist_service.get_wishlist(&name).await;
         if let Some(wishlist) = result{
-
-            let result = dto::output::wishlist_info::WishlistInfo{
-                name: wishlist.name.clone(),
-                games: data.get_wishlist_games(wishlist.games(), &wishlist.preference.language).await,
-                language: wishlist.preference.language.clone(),
-                markets: wishlist.preference.markets().into_iter().map(|s| {s.to_string()}).collect()
-            };
-            HttpResponse::Created()
-                .content_type("application/json")
-                .json(
-                    result
-                )
-        } else{
-            HttpResponse::BadRequest().body("Error")
+            return HttpResponse::Created()
+            .content_type("application/json")
+            .json(
+                Self::entity_to_dto(wishlist)
+            )
+        }else {
+            return HttpResponse::InternalServerError()
+            .json(
+                "could not fetch wishlist "
+            )
         }
 
     }
@@ -94,7 +101,7 @@ impl WishlistController{
         let dto = form.into_inner();
         if let Some(mut wishlist) = data.wishlist_service.get_wishlist(&dto.name).await{
             let element = dto.game;
-            let mut markets: Markets;
+            let markets: Markets;
             if let Some(market_list) = element.markets{
                 markets = Markets::from_vec_str(market_list).0;
             }else{
@@ -104,10 +111,19 @@ impl WishlistController{
             if let Some(game) = game{
                 wishlist.add_a_game(game, Some(markets));
                 data.wishlist_service.save(&wishlist).await;
-                let success_message = "game with".to_string() + &element.id +
-                    " is added to wishlist with name " + &dto.name;
-                return HttpResponse::Ok()
-                    .body(success_message);
+
+                if let Some(wishlist) = data.wishlist_service.get_wishlist(&wishlist.name).await{
+                    return HttpResponse::Created()
+                    .content_type("application/json")
+                    .json(
+                        Self::entity_to_dto(wishlist)
+                    )
+                }else {
+                    return HttpResponse::InternalServerError()
+                    .json(
+                        "could not fetch wishlist "
+                    )
+                }
             }else {
                 let error_message = "couldn't get game with id ".to_string() + &element.id;
                 return HttpResponse::BadRequest()
@@ -120,12 +136,63 @@ impl WishlistController{
         };
     }
 
+    fn entity_to_dto(wishlist: Wishlist)->dto::output::wishlist_info::WishlistInfo{
+        let games: Vec<dto::output::wishlist_info::WishlistInfoElement> = wishlist.games.into_iter().map(|pair|{
+            let markets = pair.1.markets().into_iter().map(|str|{str.to_string()}).collect();
+            let game = pair.1.game;
+            dto::output::wishlist_info::WishlistInfoElement{
+                game: dto::output::GameInfo::new(game),
+                markets: markets
+            }
+        }).collect();
+        dto::output::wishlist_info::WishlistInfo{
+            name: wishlist.name.clone(),
+            games,
+            language: wishlist.preference.language.clone(),
+            markets: wishlist.preference.markets().into_iter().map(|s| {s.to_string()}).collect()
+        }
+
+    }
+
+    //delete /remove
+    pub async fn remove_game_from_wishlist(form: web::Json<dto::input::RemoveFromWishlistDTO>, data: web::Data<WishlistController>) -> impl Responder {
+        let dto = form.into_inner();
+        if let Some(mut wishlist) = data.wishlist_service.get_wishlist(&dto.name).await{
+            if wishlist.remove_a_game(&dto.game_id) {
+                data.wishlist_service.save(&wishlist).await;
+                if let Some(wishlist) = data.wishlist_service.get_wishlist(&dto.name).await{
+                    return HttpResponse::Ok()
+                    .content_type("application/json")
+                    .json(
+                        Self::entity_to_dto(wishlist)
+                    )
+                }else {
+                    return HttpResponse::InternalServerError()
+                    .json(
+                        "could not fetch wishlist "
+                    )
+                }
+
+            }else {
+                return HttpResponse::BadRequest()
+                    .body("couldnt remove Item from Wish list")
+
+            }
+        }else{
+            let error_message = "couldn't get wishlist with id ".to_string() + &dto.name;
+            return HttpResponse::BadRequest()
+                .body(&error_message)
+        }
+    }
+
+
     pub fn get_web_service(c: web::Data<Self>) -> Scope<> {
         web::scope("/wishlist").
             app_data(c.clone()).
             route("/create", web::post().to(Self::create_wishlist)).
             route("/{name}", web::get().to(Self::get_wishlist)).
-            route("/add", web::patch().to(Self::add_game_to_wishlist))
+            route("/add", web::patch().to(Self::add_game_to_wishlist)).
+            route("/remove", web::delete().to(Self::remove_game_from_wishlist))
 
 
     }
