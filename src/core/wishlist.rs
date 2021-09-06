@@ -14,7 +14,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 use std::collections::{HashSet, HashMap};
-use crate::client::client_service::microsoft_api::{MARKETS, XboxLiveLanguage};
+use crate::client::client_service::microsoft_api::{MARKETS};
 use crate::core::game::Game;
 
 pub struct Wishlist{
