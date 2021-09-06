@@ -272,17 +272,17 @@ impl WishlistController{
         let mut games_preferred_markets = HashMap::<String, Markets>::new();
 
         for pair in wishlist.games().into_iter(){
-            /*let old_markets = Markets::from_vec_str(pair.1.into_iter().map(|s|{s.to_string()}).collect()).0;
+            let old_markets = Markets::from_vec_str(pair.1.into_iter().map(|s|{s.to_string()}).collect()).0;
             if wishlist.preference.markets_by_default.equal(&old_markets){
-                games_preferred_markets.insert(pair.0.to_string(), preferred_markets.clone());
+                games_preferred_markets.insert(pair.0.to_string().to_uppercase(), preferred_markets.clone());
             }else{
-                games_preferred_markets.insert(pair.0.to_string(), old_markets);
-            }*/
+                games_preferred_markets.insert(pair.0.to_string().to_uppercase(), old_markets);
+            }
         }
 
         if let Some(dto_games_preferred_markets) = dto_games_preferred_markets{
             for wishlist_element in dto_games_preferred_markets.into_iter(){
-                if let None = games_preferred_markets.insert(wishlist_element.id.clone(), Markets::from_vec_str(wishlist_element.markets).0){
+                if let None = games_preferred_markets.insert(wishlist_element.id.clone().to_uppercase(), Markets::from_vec_str(wishlist_element.markets).0){
                     return CreateUpdatedGameListResponse::GameDosentBelongToWishlist(wishlist_element.id)
                 }
             }
@@ -291,7 +291,7 @@ impl WishlistController{
         for pair in games_preferred_markets.into_iter(){
             let game = game_service.get_game_info(&pair.0, &language, pair.1.to_vec()).await;
             if let Some(game) = game{
-                if let Some(_) = updated_game_list.insert(game.id().to_string(),WishlistElement::new(game,preferred_markets.clone())){
+                if let Some(_) = updated_game_list.insert(game.id().to_string(),WishlistElement::new(game,pair.1)){
                     return CreateUpdatedGameListResponse::RedundantGameError(pair.0.clone().to_string());
                 }
             }else{
