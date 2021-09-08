@@ -13,9 +13,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 use mongodb::bson::{Bson,Document, doc};
-use mongodb::{Collection};
+use mongodb::{Collection, Cursor};
 use async_trait::async_trait;
-
+use tokio::stream::StreamExt;
 pub trait MongoEntityRepo<T> where T: Sync + Send{
     fn entity_to_document(&self, entity: &T)-> Document;
     fn create_entity_from_document(&self, doc : &Document) -> T;
@@ -96,6 +96,21 @@ pub trait  Repo <T> where T: Sync + Send + MongoEntity + UniqueEntity
             },
             Err(_error) => None
         }
+    }
+
+    async fn fetch_all(&self)-> Vec<T>{
+        let data_base_collection = self.get_data_base_collection();
+        let mut vector = Vec::<T>::new();
+        let result = data_base_collection.find(None, None).await;
+        if let Ok(mut cursor) = result{
+            while let Some(doc) = cursor.next().await {
+                if let Ok(doc )=doc{
+                    vector.push(T::from_document(&doc));
+                };
+              };
+        };
+        vector
+        
     }
 
     async fn get_document_by_query(&self, query: Document)-> Option<Document>{

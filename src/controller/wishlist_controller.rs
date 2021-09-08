@@ -1,6 +1,6 @@
 use crate::service::wishlist_service::WishlistService;
 use std::sync::Arc;
-use super::dto;
+use super::dto::{self, output};
 use super::dto::input::UpdateWishlistPreferenceDTO;
 use actix_web::{Responder, web, HttpResponse, Scope};
 use std::collections::{HashSet, HashMap};
@@ -28,11 +28,11 @@ impl WishlistController{
     // Post /create
     pub async fn create_wishlist(form: web::Json<dto::input::CreateWishlist>, data: web::Data<WishlistController>) -> impl Responder {
         let dto = form.into_inner();
-        let mut preferred_markets = Markets::from_vec_str(dto.markets).0;
+        let preferred_markets = Markets::from_vec_str(dto.markets).0;
         let mut game_list = HashMap::<String, WishlistElement>::new();
 
         for game_dto in dto.games.into_iter(){
-            let mut markets;
+            let markets;
             if let Some(markets_list) = game_dto.markets{
                 markets = Markets::from_vec_str(markets_list).0;
             }else{
@@ -194,13 +194,9 @@ impl WishlistController{
     }
 
     
-    
-
-    
 
 
-
-
+    // patch wishlist
     pub async fn change_preference(form: web::Json<dto::input::UpdateWishlistPreferenceDTO>, data: web::Data<WishlistController>) -> impl Responder {
         let dto = form.into_inner();
         let wishlist_service = &*data.wishlist_service;
@@ -303,17 +299,35 @@ impl WishlistController{
     }
 
     
+    //delete /remove
+    pub async fn delete_wishlist(web::Path((name)): web::Path<(String)>, data: web::Data<WishlistController>)-> impl Responder{
+        let wishlist_service = &*data.wishlist_service;
+        if let Some(_) = wishlist_service.get_wishlist(&name).await{
+            if wishlist_service.delete(&name).await{
+                HttpResponse::Ok().body("wish list deleted ")
+            }else {
+                HttpResponse::InternalServerError().body("Unable to delete wishlist")
+            }
+        }else{
+            let error_message = "Cannot fetch Wishlist with the provided name".to_string() + &name;
+            HttpResponse::BadRequest()
+            .body(&error_message)
+        }
+    } 
 
-
-    fn updated_wishlist_games(){
-        
+    pub async fn get_all(data: web::Data<WishlistController>)-> impl Responder{
+        let wishlist_service = &*data.wishlist_service;
+        let vec: Vec<dto::output::wishlist_info::WishlistInfo> = wishlist_service.get_all().await.into_iter().map(|entity|{
+            Self::entity_to_dto(entity)
+        }).collect();
+        return HttpResponse::Created()
+            .content_type("application/json")
+            .json(
+                vec
+            )
     }
 
-    /* 
-    pub fn get_all(data: web::Data<WishlistController>) -> impl Responder{
 
-    }
-*/
 
 
 
@@ -321,11 +335,12 @@ impl WishlistController{
         web::scope("/wishlist").
             app_data(c.clone()).
             route("/create", web::post().to(Self::create_wishlist)).
-            route("/{name}", web::get().to(Self::get_wishlist)).
-            route("/add", web::patch().to(Self::add_game_to_wishlist)).
+            route("/all", web::get().to(Self::get_all)).
+            route("/one/{name}", web::get().to(Self::get_wishlist)).
+            route("/game/add", web::patch().to(Self::add_game_to_wishlist)).
             route("/update_preference", web::patch().to(Self::change_preference)).
-            route("/remove", web::delete().to(Self::remove_game_from_wishlist))
-
+            route("/game/remove", web::delete().to(Self::remove_game_from_wishlist)).
+            route("/{name}", web::delete().to(Self::delete_wishlist))
 
     }
 

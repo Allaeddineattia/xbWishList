@@ -54,5 +54,13 @@ impl  WishlistService {
         self.wishlist_repo.fetch_by_name(name).await
     }
 
+    pub async fn get_all(&self) -> Vec<Wishlist>{
+        self.wishlist_repo.get_all().await
+    }
+
+    pub async fn delete(&self, name: &str)-> bool {
+        self.wishlist_repo.delete_by_name(name).await
+    }
+
 }
 

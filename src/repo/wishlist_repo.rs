@@ -98,6 +98,29 @@ impl WishlistRepo {
         }
     }
 
+    pub async fn delete_by_name(&self, name: &str) -> bool{
+        let query = doc! {"name": name};
+        let result = self.get_data_base_collection().delete_one(query, None).await;
+        match result {
+            Ok(res) => {
+                println!("deleted {} ", res.deleted_count); 
+                true
+            },
+            Err(error) => {
+                println!("delete error {}", error);
+                false
+            }
+        }
+    }
+
+    pub async fn get_all(&self) -> Vec<wishlist::Wishlist>{
+        let mut vec = Vec::<wishlist::Wishlist>::new();
+        for model in self.fetch_all().await.into_iter(){
+            vec.push(self.convert_model_to_entity(model).await);
+        };
+        vec
+    }
+
     pub async fn save_wishlist(&self, wishlist: &wishlist::Wishlist){
         self.save(&self.entity_to_model(wishlist)).await
     }
