@@ -53,12 +53,12 @@ impl GameModel{
 
             };
             if let Some(missing_markets) = missing_markets{
-                return FetchGame::MissingMarkets(missing_markets)
+                return FetchGame::MissingMarkets(self.id.clone(),missing_markets)
             }else {
                 FetchGame::Fetched(Game::create(self.id, (language.to_lowercase(), game_description), purchase_options))
             }
         }else{
-            FetchGame::MissingDescription(language)
+            FetchGame::MissingDescription(self.id.clone(),language)
 
         }
 
@@ -68,8 +68,8 @@ impl GameModel{
 
 pub enum FetchGame<'a>{
     Fetched(Game),
-    MissingMarkets(Vec<& 'a str>),
-    MissingDescription(& 'a str),
+    MissingMarkets(String,Vec<& 'a str>),
+    MissingDescription(String,& 'a str),
     ElementNotFound(String),
 }
 

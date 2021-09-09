@@ -32,7 +32,7 @@ impl GameController {
 
 
     pub async fn search_game(web::Path((query)): web::Path<(String)>, data: web::Data<GameController>) -> impl Responder {
-        let vec: Vec<super::dto::output::SearchResult> = data.game_service.search_game(&query,"US").await.into_iter().map(
+        let vec: Vec<super::dto::output::SearchResult> = data.game_service.search_by_name(&query,"US").await.into_iter().map(
             super::dto::output::SearchResult::new
         ).collect();
         HttpResponse::Ok()

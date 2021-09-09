@@ -75,10 +75,10 @@ impl WishlistRepo {
             FetchGame::Fetched(game) => {
                 return Some(wishlist::WishlistElement::new(game, markets))
             }
-            FetchGame::MissingMarkets(_) => {
+            FetchGame::MissingMarkets(_,_) => {
                 None
             }
-            FetchGame::MissingDescription(_) => {
+            FetchGame::MissingDescription(_,_) => {
                 None
             }
             FetchGame::ElementNotFound(_) => {
