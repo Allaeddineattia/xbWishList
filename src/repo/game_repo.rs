@@ -55,6 +55,20 @@ impl GameRepo{
         self.fetch_by_query(query).await
     }
 
+    pub async fn search_by_name<'a>(&self, name:&str, language: & 'a str, markets: &Vec<& 'a str>)-> Vec<FetchGame<'a>>{
+        let query = doc!{
+            "name": doc!{
+                "$regex": name
+            }
+        };
+        
+        let mut vec = Vec::<FetchGame>::new();
+        for game_model in self.fetch_many_by_query(query).await.into_iter(){
+            vec.push(game_model.get_game(language, markets));
+        };
+        vec
+    }
+
     pub async fn fetch_game<'a>(&self, id:&str , language: & 'a str, markets: &Vec<& 'a str>)-> FetchGame<'a>{
         let query = doc! {
             "id": id,
@@ -64,11 +78,11 @@ impl GameRepo{
             }
 
         };
-        let game_entity = self.fetch_by_query(query).await;
-        if let Some(game_entity) = game_entity  {
-            return  game_entity.get_game(language, markets);
+        let game_model = self.fetch_by_query(query).await;
+        if let Some(game_model) = game_model  {
+            return  game_model.get_game(language, markets);
         }else{
-            FetchGame::ElementNotFound("hehi".to_string())
+            FetchGame::ElementNotFound(id.to_string())
         }
     }
 }

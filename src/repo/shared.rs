@@ -113,6 +113,20 @@ pub trait  Repo <T> where T: Sync + Send + MongoEntity + UniqueEntity
         
     }
 
+    async fn fetch_many_by_query(&self, query: Document)-> Vec<T>{
+        let data_base_collection = self.get_data_base_collection();
+        let mut vector = Vec::<T>::new();
+        let query_result = data_base_collection.find(query,None).await;
+        if let Ok(mut cursor) = query_result{
+            while let Some(doc) = cursor.next().await {
+                if let Ok(doc )=doc{
+                    vector.push(T::from_document(&doc));
+                };
+              };
+        };
+        vector
+    }
+
     async fn get_document_by_query(&self, query: Document)-> Option<Document>{
         let data_base_collection = self.get_data_base_collection();
         let query_result = data_base_collection.find_one(query,None).await;
