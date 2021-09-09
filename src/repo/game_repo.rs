@@ -57,7 +57,7 @@ impl GameRepo{
 
     pub async fn search_by_name<'a>(&self, name:&str, language: & 'a str, markets: &Vec<& 'a str>)-> Vec<FetchGame<'a>>{
         let query = doc!{
-            "name": doc!{
+            "descriptions.name": doc!{
                 "$regex": name
             }
         };

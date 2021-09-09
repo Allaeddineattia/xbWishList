@@ -14,7 +14,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 
-
+use serde::{Deserialize};
 use actix_web::{get, HttpResponse, web, Responder, Scope, HttpRequest, error};
 use crate::service::game_service::GameService;
 use super::dto;
@@ -24,6 +24,14 @@ pub struct GameController{
     game_service: Arc<GameService>
 }
 
+#[derive(Deserialize)]
+pub struct Info {
+    query: String,
+    markets: String,
+    language: String
+
+}
+
 impl GameController {
 
     pub fn new(game_service: Arc<GameService>) -> Self {
@@ -31,9 +39,9 @@ impl GameController {
     }
 
 
-    pub async fn search_game(web::Path((query)): web::Path<(String)>, data: web::Data<GameController>) -> impl Responder {
-        let vec: Vec<super::dto::output::SearchResult> = data.game_service.search_by_name(&query,"US").await.into_iter().map(
-            super::dto::output::SearchResult::new
+    pub async fn search_game(info: web::Query<Info>,data: web::Data<GameController>) -> impl Responder {
+        let vec: Vec<dto::output::GameInfo> = data.game_service.search_by_name(&info.query,& info.language, info.markets.split(",").collect()).await.into_iter().map(
+            dto::output::GameInfo::new
         ).collect();
         HttpResponse::Ok()
             .content_type("application/json")
@@ -65,7 +73,8 @@ impl GameController {
         web::scope("/game").
             app_data(c.clone()).
             route("/info", web::get().to(Self::get_game)).
-            route("/search/{query}", web::get().to(Self::search_game))
+            //route("/search/{query}", web::get().to(Self::search_game)).
+            route("/searchdb", web::get().to(Self::search_game))
 
     }
 
