@@ -38,7 +38,7 @@ impl WishlistController{
             }else{
                 markets = preferred_markets.clone();
             }
-            let game = data.game_service.get_game_info(&game_dto.id, &dto.language, markets.to_vec()).await;
+            let game = data.game_service.get_game_info(&game_dto.id, &dto.language, &markets.to_vec()).await;
             if let Some(game) = game{
                 if let Some(_) = game_list.insert(game.id().to_string(),WishlistElement::new(game,markets)){
                     let error_message = "game with id ".to_string() + &game_dto.id +
@@ -77,7 +77,7 @@ impl WishlistController{
     async fn get_wishlist_games(&self, vec : Vec<(&str, Vec<&str>)>, language:&str)->Vec<dto::output::wishlist_info::WishlistInfoElement>{
         let mut result = Vec::<dto::output::wishlist_info::WishlistInfoElement>::new();
         for pair in vec.into_iter(){
-            let game = self.game_service.get_game_info(pair.0, language, pair.1.iter().map(|s|{&s[..]}).collect()).await.unwrap();
+            let game = self.game_service.get_game_info(pair.0, language, &pair.1.iter().map(|s|{&s[..]}).collect()).await.unwrap();
             let game_info = dto::output::wishlist_info::WishlistInfoElement{
                 game: dto::output::GameInfo::new(game),
                 markets: pair.1.iter().map(|s|{s.to_string()}).collect()
@@ -115,7 +115,7 @@ impl WishlistController{
             }else{
                 markets = wishlist.preference.markets_by_default.clone();
             }
-            let game = data.game_service.get_game_info(&element.id, &wishlist.preference.language, markets.to_vec()).await;
+            let game = data.game_service.get_game_info(&element.id, &wishlist.preference.language, &markets.to_vec()).await;
             if let Some(game) = game{
                 wishlist.add_a_game(game, Some(markets));
                 data.wishlist_service.save(&wishlist).await;
@@ -285,7 +285,7 @@ impl WishlistController{
         }
 
         for pair in games_preferred_markets.into_iter(){
-            let game = game_service.get_game_info(&pair.0, &language, pair.1.to_vec()).await;
+            let game = game_service.get_game_info(&pair.0, &language, &pair.1.to_vec()).await;
             if let Some(game) = game{
                 if let Some(_) = updated_game_list.insert(game.id().to_string(),WishlistElement::new(game,pair.1)){
                     return CreateUpdatedGameListResponse::RedundantGameError(pair.0.clone().to_string());

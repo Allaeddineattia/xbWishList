@@ -24,7 +24,8 @@ mod controller;
 use tokio::task;
 use mongodb::{Client, options::ClientOptions};
 use crate::client::client_service::microsoft_api::{MicrosoftApiService, MARKETS};
-use actix_web::{get, App, Result, HttpResponse, HttpServer, web};
+use actix_web::{get, http, App, Result, HttpResponse, HttpServer, web, error, Error,};
+use actix_cors::Cors;
 
 async fn init_db() -> anyhow::Result<mongodb::Client>{
     let mut client_options = ClientOptions::parse("mongodb://localhost:27017").await?;
@@ -38,6 +39,7 @@ use std::sync::Arc;
 use crate::repo::game_repo::GameRepo;
 use crate::repo::purchase_option_repo::PurchaseAvailabilityRepo;
 use crate::repo::wishlist_repo::WishlistRepo;
+use actix_web::http::header::ContentRangeSpec;
 
 #[derive(Serialize, Deserialize)]
 struct MyObj {
@@ -72,9 +74,19 @@ async fn main() -> std::io::Result<()> {
     let game_controller = web::Data::new(crate::controller::game_controller::GameController::new(game_service.clone()));
     let wishlist_controller = web::Data::new(crate::controller::wishlist_controller::WishlistController::new(wishlist_service, game_service));
     HttpServer::new(move || App::new()
+        .wrap(Cors::permissive())
         .service(crate::controller::game_controller::GameController::get_web_service(game_controller.clone()))
         .service(crate::controller::wishlist_controller::WishlistController::get_web_service(wishlist_controller.clone()))
         .service(stream)
+        .app_data(web::JsonConfig::default().error_handler(|err, _req| {
+                  error::InternalError::from_response(
+                      "",
+                          HttpResponse::BadRequest()
+                                  .content_type("application/json")
+                                  .body(format!(r#"{{"error":"{}"}}"#, err)),
+                      )
+                      .into()
+                  }))
     )
         .bind("127.0.0.1:8080")?
         .run()
@@ -117,7 +129,7 @@ mod tests{
 
         let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone(), game_repo.clone());
-        game_service.get_game_info("9PHKXB8RDKBC", "en-US", vec!["AR", "BR"]).await;
+        game_service.get_game_info("9PHKXB8RDKBC", "en-US", &vec!["AR", "BR"]).await;
         Ok(())
     }
     #[tokio::test]
@@ -131,7 +143,7 @@ mod tests{
 
         let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone(), game_repo.clone());
-        game_service.get_game_info(&"9pdgwzpkcbt6".to_uppercase(), "en-US", vec!["AR", "BR"]).await;
+        game_service.get_game_info(&"9pdgwzpkcbt6".to_uppercase(), "en-US", &vec!["AR", "BR"]).await;
         Ok(())
     }
 
@@ -145,7 +157,7 @@ mod tests{
 
         let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone(), game_repo.clone());
-        game_service.get_game_info(&"c3jpd73r365s".to_uppercase(), "en-US", vec!["AR", "BR", "FR", "US", "NE"]).await;
+        game_service.get_game_info(&"c3jpd73r365s".to_uppercase(), "en-US", &vec!["AR", "BR", "FR", "US", "NE"]).await;
         Ok(())
     }
 
@@ -159,7 +171,7 @@ mod tests{
 
         let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone(), game_repo.clone());
-        game_service.get_game_info("9MZ11KT5KLP6", "en-US", MARKETS.keys().copied().collect::<Vec<_>>()).await;
+        game_service.get_game_info("9MZ11KT5KLP6", "en-US", &MARKETS.keys().copied().collect::<Vec<_>>()).await;
         Ok(())
     }
     /*

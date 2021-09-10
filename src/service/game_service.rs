@@ -227,14 +227,19 @@ impl GameService{
         }
 
         for task_to_join in tasks{
-            let result = task_to_join.1.await.unwrap().unwrap();
-            self.save_response(&result, task_to_join.0.local(), task_to_join.0).await;
+            let result = task_to_join.1.await;
+            if let Ok(result) = result{
+                if let Ok(result) = result{
+                    self.save_response(&result, task_to_join.0.local(), task_to_join.0).await;
+                }
+            }
+
             
         }
 
     }
 
-    pub async fn get_game_info(&self, id:&str , language: & str, markets: Vec<& str>) -> Option<Game>{
+    pub async fn get_game_info(&self, id:&str , language: & str, markets: &Vec<& str>) -> Option<Game>{
         let id = &id.to_uppercase()[..];
         let mut description_is_cured = false;
         let mut missing_markets_are_cured = false;
@@ -300,16 +305,38 @@ impl GameService{
         }
     }
 
-
+    fn id_exists_in_games(id: &str, games: & Vec<Game>) -> bool{
+        for game in games{
+            if id == game.id() {
+                return true
+            }
+        }
+        false
+    }
 
     pub async fn search_by_name(&self, query: &str, language: &str, markets: Vec<& str>)-> Vec<Game>{
         let entities = self.game_repo.search_by_name(query, language, &markets).await;
-        let mut result = Vec::<Game>::new();
+        let mut games = Vec::<Game>::new();
         for game in entities{
-            self.insert_game(&mut result, game, language, &markets).await;
+            self.insert_game(&mut games, game, language, &markets).await;
         };
-        result
 
+        let result = MicrosoftApiService::search_games(query, "en-US", "US").await;
+        if let Ok(search_response) = result{
+            for item in search_response.results.into_iter(){
+                for mut product in item.products.into_iter(){
+                    product.icon = "https:".to_string() + &product.icon;
+                    println!("product found \nid: {} \ntitle: {} \nimage url: {}", product.product_id, product.title, product.icon);
+                    if ! Self::id_exists_in_games(&product.product_id,&games){
+                        let game = self.get_game_info(&product.product_id, language, &markets).await;
+                        if let Some(game) = game{
+                            games.push(game);
+                        };
+                    }
+                }
+            }
+        };
+        games
     }
 
     async fn insert_game<'a>(&self, vec: & mut Vec<Game>, mut game:  FetchGame<'a>, language: &str, markets: &Vec<& str>){

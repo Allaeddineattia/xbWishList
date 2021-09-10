@@ -56,13 +56,18 @@ impl GameRepo{
     }
 
     pub async fn search_by_name<'a>(&self, name:&str, language: & 'a str, markets: &Vec<& 'a str>)-> Vec<FetchGame<'a>>{
+
+        let pattern = regex::escape(&name).replace(" ", ".*");
+
         let query = doc!{
-            "descriptions.name": doc!{
-                "$regex": name
+            "descriptions.body.name": doc!{
+                "$regex": pattern,
+                "$options": "i"
             }
         };
         
         let mut vec = Vec::<FetchGame>::new();
+
         for game_model in self.fetch_many_by_query(query).await.into_iter(){
             vec.push(game_model.get_game(language, markets));
         };

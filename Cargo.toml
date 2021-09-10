@@ -20,3 +20,5 @@ async-trait = "0.1.50"
 phf = { version = "0.9", features = ["macros"] }
 futures = "0.1"
 actix-web = "3"
+actix-cors = "0.5.4"
+regex = "1"

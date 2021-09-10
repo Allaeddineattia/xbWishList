@@ -34,7 +34,7 @@ impl  WishlistService {
         let pref = wishlist.preference();
         for game in wishlist.games(){
 
-            self.game_service.get_game_info(game.0, &pref.language, game.1.into_iter().map(|string|{
+            self.game_service.get_game_info(game.0, &pref.language, &game.1.into_iter().map(|string|{
                 &string[..]
             }).collect()).await;
         }

@@ -55,7 +55,7 @@ impl GameController {
 
     pub async fn get_game(form: web::Json<dto::input::GetGameInfo>, data: web::Data<GameController>) -> impl Responder {
 
-        let game = data.game_service.get_game_info(&form.id, &form.language, form.markets.iter().map(|f|{&f[..]}).collect()).await;
+        let game = data.game_service.get_game_info(&form.id, &form.language, &form.markets.iter().map(|f|{&f[..]}).collect()).await;
         if let Some(game) = game {
             HttpResponse::Ok()
                 .content_type("application/json")
