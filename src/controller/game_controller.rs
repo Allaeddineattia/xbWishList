@@ -32,6 +32,13 @@ pub struct Info {
 
 }
 
+#[derive(Deserialize)]
+pub struct GetGameInfo{
+    pub id: String,
+    pub language: String,
+    pub markets: String
+}
+
 impl GameController {
 
     pub fn new(game_service: Arc<GameService>) -> Self {
@@ -53,9 +60,9 @@ impl GameController {
 
 
 
-    pub async fn get_game(form: web::Json<dto::input::GetGameInfo>, data: web::Data<GameController>) -> impl Responder {
+    pub async fn get_game(info: web::Query<GetGameInfo>, data: web::Data<GameController>) -> impl Responder {
 
-        let game = data.game_service.get_game_info(&form.id, &form.language, &form.markets.iter().map(|f|{&f[..]}).collect()).await;
+        let game = data.game_service.get_game_info(&info.id,& info.language, &info.markets.split(",").collect()).await;
         if let Some(game) = game {
             HttpResponse::Ok()
                 .content_type("application/json")
@@ -73,8 +80,7 @@ impl GameController {
         web::scope("/game").
             app_data(c.clone()).
             route("/info", web::get().to(Self::get_game)).
-            //route("/search/{query}", web::get().to(Self::search_game)).
-            route("/searchdb", web::get().to(Self::search_game))
+            route("/search", web::get().to(Self::search_game))
 
     }
 
