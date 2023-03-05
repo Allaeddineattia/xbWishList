@@ -21,3 +21,4 @@ pub mod availability;
 pub mod catalog_response;
 pub mod localized_property;
 pub mod search_response;
+pub mod leaving_soon_response;

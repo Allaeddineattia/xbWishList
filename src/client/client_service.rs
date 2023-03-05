@@ -18,6 +18,7 @@ pub mod microsoft_api{
     use reqwest::Url;
     use crate::client::input_dto::catalog_response;
     use crate::client::input_dto::search_response;
+    use crate::client::input_dto::leaving_soon_response;
     use anyhow::Result;
     use anyhow::anyhow;
 
@@ -151,26 +152,22 @@ pub mod microsoft_api{
         pub fn local(&self) -> &str {
             &self.local
         }
-
-        
     }
 
 
 
 
-    pub struct MicrosoftApiService{
-
+    pub struct MicrosoftApiClient {
+        client: reqwest::Client,
     }
 
-    impl MicrosoftApiService{
-        pub fn new() -> MicrosoftApiService {
-            MicrosoftApiService{}
+    impl MicrosoftApiClient {
+        pub fn new() -> MicrosoftApiClient {
+            MicrosoftApiClient {client: reqwest::Client::new()}
         }
 
-        pub async fn get_games(ids: Vec<String>, language: & str, market: & str)-> Result<catalog_response::Response> {
+        pub async fn get_games(&self, ids: Vec<String>, language: & str, market: & str)-> Result<catalog_response::Response> {
             println!("getting info for games with \"language\"<{}> \"market\"<{}> ids {:#?} ", language, market, ids);
-
-            let client = reqwest::Client::new();
             let ids : String = ids.join(",");
             let url = Url::parse_with_params("https://displaycatalog.mp.microsoft.com/v7.0/products",
                                              &[
@@ -180,21 +177,30 @@ pub mod microsoft_api{
                                                  ("actionFilter","Browse"),
                                                  ("fieldsTemplate","details"),
                                              ])?;
-            //println!("Path: {:?}",url);
-            let resp: reqwest::Response = client
+            println!("getting info {:?}",url);
+
+            let resp: reqwest::Response = self.client
                 .get(url)
                 .header("MS-CV", "\"\"").header("content_type", "multipart/form-data").send()
                 .await?;
 
-
+            println!("getting info {:?}",resp.status());
             return match resp.status() {
                 StatusCode::OK => {
-                    let result_test: catalog_response::Response = resp.json().await?;
-                    Ok(result_test)
-                    //get_info_from_response(&result_test);
+                    return match resp.json().await
+                    {
+                        Ok(v) => {
+                            Ok(v)
+                        }
+                        Err(e) =>
+                            {
+                                eprintln!("{}", e);
+                                Err(anyhow::Error::from(e))
+                            }
+                    }
                 }
                 _ => {
-                    println!("error: {:?}", resp.text().await?);
+                    eprintln!("error: {:?}", resp.text().await?);
                     Err(anyhow!("error"))
                 },
             }
@@ -212,8 +218,39 @@ pub mod microsoft_api{
 
         }*/
 
-        pub async fn search_games(query: &str, language: & 'static str, market: & 'static str)-> Result<search_response::SearchResponse> {
-            let client = reqwest::Client::new();
+        pub async fn get_game_pass_leaving_soon(&self) -> Result<Vec<leaving_soon_response::LeavingSoonResponse>>
+        {
+            let url = Url::parse("https://catalog.gamepass.com/sigls/v2?id=393f05bf-e596-4ef6-9487-6d4fa0eab987&language=en-us&market=US").unwrap();
+            let resp: reqwest::Response = match self.client.get(url).send().await
+            {
+                Ok(response) => response,
+                Err(e) => return Err(anyhow!(e)),
+            };
+
+            match resp.status(){
+                StatusCode::OK => {}
+                _ => {
+                    println!("error: {:?}", resp.text().await?);
+                    return Err(anyhow!("error"));
+                },
+            };
+            return match resp.json().await
+            {
+                Ok(v) => {
+                    Ok(v)
+                },
+                Err(e) =>
+                    {
+                        eprintln!("{}", e);
+                        Err(anyhow::Error::from(e))
+                    }
+            }
+
+
+
+        }
+
+        pub async fn search_games(&self, query: &str, language: & str, market: & str)-> Result<search_response::SearchResponse> {
             let url = Url::parse_with_params("https://displaycatalog.mp.microsoft.com/v7.0/productFamilies/autosuggest",
                                              &[
                                                  ("languages", language),
@@ -222,7 +259,7 @@ pub mod microsoft_api{
                                                  ("productFamilyNames","Games"),
                                              ])?;
             
-            let resp: reqwest::Response = client
+            let resp: reqwest::Response = self.client
                                             .get(url)
                                             .header("MS-CV", "\"\"").header("content_type", "multipart/form-data").send()
                                             .await?;       

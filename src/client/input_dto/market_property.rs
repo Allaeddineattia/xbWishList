@@ -52,8 +52,8 @@ pub struct RelatedProducts{
 pub struct UsageData{
     aggregate_time_span: String,
     average_rating: f32,
-    play_count: Option<u32>,
-    rating_count: u32,
+    play_count: Option<f32>,
+    rating_count: f32,
     rental_count: Option<String>,
     trial_count: Option<String>,
     purchase_count: Option<String>,

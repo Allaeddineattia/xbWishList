@@ -23,7 +23,7 @@ mod controller;
 
 use tokio::task;
 use mongodb::{Client, options::ClientOptions};
-use crate::client::client_service::microsoft_api::{MicrosoftApiService, MARKETS};
+use crate::client::client_service::microsoft_api::{MicrosoftApiClient, MARKETS};
 use actix_web::{get, http, App, Result, HttpResponse, HttpServer, web, error, Error,};
 use actix_cors::Cors;
 
@@ -66,7 +66,6 @@ async fn main() -> std::io::Result<()> {
     let purchase_repo = PurchaseAvailabilityRepo::new();
     let game_repo = Arc::new(GameRepo::new(&db,purchase_repo));
     let wishlist_repo = Arc::new(WishlistRepo::new(&db, game_repo.clone()));
-
     let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
     let game_service = Arc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone(), game_repo.clone()));
     let wishlist_service =  Arc::new(service::wishlist_service::WishlistService::new(game_service.clone(), wishlist_repo));
@@ -111,6 +110,12 @@ async fn main() -> std::io::Result<()> {
 //}
 
 
+
+////  -------------------------------- Tests 
+/// 
+/// 
+/// 
+///
 #[cfg(test)]
 mod tests{
     use std::collections::HashSet;

@@ -58,6 +58,17 @@ impl GameController {
 
     }
 
+    pub async fn get_game_pass_leaving_soon(data: web::Data<GameController>) -> impl Responder
+    {
+        let vec: Vec<dto::output::GameInfo> = data.game_service.get_game_pass_leaving_soon(None,None).await.into_iter().map(
+            dto::output::GameInfo::new
+        ).collect();
+        HttpResponse::Ok()
+            .content_type("application/json")
+            .json(
+                vec
+            )
+    }
 
 
     pub async fn get_game(info: web::Query<GetGameInfo>, data: web::Data<GameController>) -> impl Responder {
@@ -76,11 +87,14 @@ impl GameController {
 
     }
 
+
+
     pub fn get_web_service(c: web::Data<Self>) -> Scope<> {
         web::scope("/game").
             app_data(c.clone()).
             route("/info", web::get().to(Self::get_game)).
-            route("/search", web::get().to(Self::search_game))
+            route("/search", web::get().to(Self::search_game)).
+            route("/game_pass", web::get().to(Self::get_game_pass_leaving_soon))
 
     }
 

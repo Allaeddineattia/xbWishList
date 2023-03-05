@@ -157,7 +157,7 @@ pub struct Package{
     package_id: String,
     content_id: String,
     key_id: Option<String>,
-    package_rank: Option<i32>,
+    package_rank: Option<i128>,
     package_uri: Option<String>,
     platform_dependencies: Option<Vec<PlatformDependency>>,
     platform_dependency_xml_blob: Option<String>,
@@ -173,7 +173,7 @@ pub struct Package{
 #[serde(rename_all = "PascalCase")]
 pub struct Application{
     application_id: String,
-    declaration_order: i32,
+    declaration_order: i128,
     extensions: Vec<String>,
 
 }
@@ -181,8 +181,8 @@ pub struct Application{
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct FrameworkDependency{
-    max_tested: i32,
-    min_version: i32,
+    max_tested: i128,
+    min_version: i128,
     package_identity: String,
 
 }
@@ -190,8 +190,8 @@ pub struct FrameworkDependency{
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct PlatformDependency{
-    max_tested: Option<i32>,
-    min_version: Option<i32>,
+    max_tested: Option<i128>,
+    min_version: Option<i128>,
     platform_name: String,
 
 }

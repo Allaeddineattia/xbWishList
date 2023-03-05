@@ -13,6 +13,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use std::any::Any;
 use crate::client::input_dto::catalog_response;
 use crate::client::input_dto;
 use crate::core::game;
@@ -23,21 +24,25 @@ use crate::repo::game_repo::{GameRepo, GameEntity};
 use std::collections::HashMap;
 use std::future::Future;
 use std::rc::Rc;
-use crate::client::client_service::microsoft_api::{XboxLiveLanguage, MicrosoftApiService, MARKETS};
+use crate::client::client_service::microsoft_api::{XboxLiveLanguage, MicrosoftApiClient, MARKETS};
 use crate::core::purchase_option::{PurchaseAvailability};
 use crate::service::purchase_option_service::PurchaseOptionService;
 use crate::core::game::Game;
 use crate::core::game::Property;
 use tokio::task;
 use std::sync::Arc;
+use anyhow::private::kind::TraitKind;
+use tokio::task::JoinHandle;
 use crate::client::input_dto::search_response::{SearchItem, SearchItemProduct};
 use crate::client::input_dto::catalog_response::Response;
+use crate::client::input_dto::leaving_soon_response::LeavingSoonResponse;
 use crate::repo::models::game_model::{FetchGame, GameModel};
 
 pub struct GameService {
     db : Arc<Database>,
     purchase_option_service: Arc<PurchaseOptionService>,
     game_repo: Arc<GameRepo>,
+    client : Arc<MicrosoftApiClient>
 }
 
 impl GameService{
@@ -47,6 +52,7 @@ impl GameService{
             db: db.clone(), 
             purchase_option_service, 
             game_repo,
+            client: Arc::new(MicrosoftApiClient::new())
         }
     }
 
@@ -207,35 +213,45 @@ impl GameService{
     async fn cure_description_missing (&self, id: &str, language: &str){
         println!("game description is missing trying to cure the problem");
         let market = & crate::client::client_service::microsoft_api::UNITED_STATES;
-        let result = MicrosoftApiService::get_games(vec![id.to_string()], language, market.short_id()).await;
+        let result = self.client.get_games(vec![id.to_string()], language, market.short_id()).await;
         if let Ok(result) = result{
-            self.save_response(&result, language, &market).await;
+            self.save_response(&result, language, &market).await.expect("TODO: panic message");
         }
 
     }
 
-    async fn cure_markets_missing(&self, id: &str, markets: &Vec<&str>){
+    async fn cure_markets_missing<'a>(&'a self, id: &str, markets: &Vec<&str>){
         println!("game description is missing markets to cure the problem");
-        let mut tasks : Vec<(&XboxLiveLanguage,task::JoinHandle<Result<crate::client::input_dto::catalog_response::Response, anyhow::Error>>)> = vec![];
         for market in markets{
             let market = MARKETS.get(market);
             if let Some(market) = market{
-                let task = task::spawn(MicrosoftApiService::get_games(vec![id.to_string()], market.local(), market.short_id()));
-                tasks.push( (market,task));
-            } 
+                if let Ok(result) = self.client.get_games(vec![id.to_string()], market.local(), market.short_id()).await{
 
-        }
+                    self.save_response(&result, market.local(), market).await.expect("TODO: panic message");
 
-        for task_to_join in tasks{
-            let result = task_to_join.1.await;
-            if let Ok(result) = result{
-                if let Ok(result) = result{
-                    self.save_response(&result, task_to_join.0.local(), task_to_join.0).await;
                 }
             }
-
-            
         }
+
+    }
+
+    pub async fn get_game_pass_leaving_soon(&self, language: Option<& str>, markets: Option<&Vec<& str>>)-> Vec<Game>
+    {
+        let language = language.unwrap_or_else(|| { "en-US" });
+        let markets = vec!["US"];
+        let response: Vec<LeavingSoonResponse> = self.client.get_game_pass_leaving_soon().await.unwrap();
+        let mut result: Vec<Game> = vec![];
+        for game in response
+        {
+            if let Some(id) = game.id
+            {
+                if let Some(game_info) = self.get_game_info(&id, language, &markets).await
+                {
+                    result.push(game_info);
+                }
+            }
+        };
+        return result;
 
     }
 
@@ -292,16 +308,12 @@ impl GameService{
     }
 
     async fn get_game_info_from_all_markets(&self, id: &str){
-        let mut tasks : Vec<(&XboxLiveLanguage,task::JoinHandle<Result<crate::client::input_dto::catalog_response::Response, anyhow::Error>>)> = vec![];
         for market in MARKETS.into_iter(){
             let market = market.1;
-            let task = task::spawn(MicrosoftApiService::get_games(vec![id.to_string()], market.local(), market.short_id()));
-                tasks.push( (market,task));
-        }
-        for task_to_join in tasks{
-            let result = task_to_join.1.await.unwrap().unwrap();
-            self.save_response(&result, task_to_join.0.local(), task_to_join.0).await;
-            
+            if let Ok(result) = self.client.get_games(vec![id.to_string()], market.local(), market.short_id()).await
+            {
+                self.save_response(&result, market.local(), market).await.expect("TODO: panic message");
+            }
         }
     }
 
@@ -321,7 +333,7 @@ impl GameService{
             self.insert_game(&mut games, game, language, &markets).await;
         };
 
-        let result = MicrosoftApiService::search_games(query, "en-US", "US").await;
+        let result = self.client.search_games(query, "en-US", "US").await;
         if let Ok(search_response) = result{
             for item in search_response.results.into_iter(){
                 for mut product in item.products.into_iter(){
@@ -381,7 +393,7 @@ impl GameService{
         let market = MARKETS.get(language);
         let mut vec = Vec::<SearchItemProduct>::new();
         if let Some(market) = market{
-            let result = MicrosoftApiService::search_games(query, &market.local(), &market.short_id()).await;
+            let result = self.client.search_games(query, &market.local(), &market.short_id()).await;
             if let Ok(search_response) = result{
                 for item in search_response.results.into_iter(){
                     for mut product in item.products.into_iter(){
@@ -397,6 +409,7 @@ impl GameService{
         vec
         
     }
+
 
 }
 
