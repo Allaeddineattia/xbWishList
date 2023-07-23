@@ -16,7 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 use crate::core::purchase_option::PurchaseAvailability;
 use mongodb::bson::{doc,Document};
 use chrono::{DateTime, Utc};
-use crate::repo::shared::{MongoEntityRepo, MongoEntity};
+use crate::repo::shared::{ MongoEntity};
 
 pub struct PurchaseAvailabilityRepo;
 
@@ -28,6 +28,7 @@ impl PurchaseAvailabilityRepo{
 
 impl MongoEntity for PurchaseAvailability{
     fn to_document(&self) -> Document {
+
         doc!{
             "id" : &self.id,
             "sale_state" : self.sale_state_string(),
@@ -35,8 +36,8 @@ impl MongoEntity for PurchaseAvailability{
             "sale_price" : self.sale_price,
             "discount_ratio" : self.discount_ratio as u32,
             "currency": &(self.currency),
-            "start_date": self.start_date,
-            "end_date": self.end_date,
+            "start_date": mongodb::bson::DateTime::from_chrono(self.start_date),
+            "end_date": mongodb::bson::DateTime::from_chrono(self.end_date),
         }
     }
 
@@ -47,8 +48,8 @@ impl MongoEntity for PurchaseAvailability{
         let sale_price = doc.get_f64("sale_price").unwrap();
         let discount_ratio = doc.get_i32("discount_ratio").unwrap() as u8;
         let currency: String = String::from(doc.get_str("currency").unwrap());
-        let start_date: DateTime::<Utc> = *doc.get_datetime("start_date").unwrap();
-        let end_date: DateTime::<Utc> = *doc.get_datetime("end_date").unwrap();
+        let start_date: DateTime::<Utc> = (*doc.get_datetime("start_date").unwrap()).into();
+        let end_date: DateTime::<Utc> = (*doc.get_datetime("end_date").unwrap()).into();
         PurchaseAvailability {
             id,
             sale_state,

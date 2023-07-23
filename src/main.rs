@@ -21,42 +21,23 @@ mod repo;
 mod service;
 mod controller;
 
-use tokio::task;
 use mongodb::{Client, options::ClientOptions};
-use crate::client::client_service::microsoft_api::{MicrosoftApiClient, MARKETS};
-use actix_web::{get, http, App, Result, HttpResponse, HttpServer, web, error, Error,};
+use actix_web::{ App, HttpResponse, HttpServer, web, error};
 use actix_cors::Cors;
+use utoipa_swagger_ui;
 
-async fn init_db() -> anyhow::Result<mongodb::Client>{
+async fn init_db() -> anyhow::Result<Client>{
     let mut client_options = ClientOptions::parse("mongodb://localhost:27017").await?;
     client_options.app_name = Some("XbWishList".to_string());
     Ok(Client::with_options(client_options)?)
 }
 
 
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use crate::repo::game_repo::GameRepo;
 use crate::repo::purchase_option_repo::PurchaseAvailabilityRepo;
 use crate::repo::wishlist_repo::WishlistRepo;
-use actix_web::http::header::ContentRangeSpec;
 
-#[derive(Serialize, Deserialize)]
-struct MyObj {
-    name: String,
-}
-
-#[get("/stream")]
-async fn stream(data: web::Data<crate::controller::game_controller::GameController>) -> Result<HttpResponse> {
-   Ok(HttpResponse::Ok()
-        .content_type("application/json")
-        .json(
-            MyObj{
-                name: "hehi".to_string()
-            }
-        )
-    )
-}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -64,19 +45,39 @@ async fn main() -> std::io::Result<()> {
     let client = init_db().await.unwrap();
     let db = Arc::new(client.database("xbWishlist"));
     let purchase_repo = PurchaseAvailabilityRepo::new();
-    let game_repo = Arc::new(GameRepo::new(&db,purchase_repo));
-    let wishlist_repo = Arc::new(WishlistRepo::new(&db, game_repo.clone()));
-    let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
-    let game_service = Arc::new(service::game_service::GameService::new(db.clone(), purchase_option_service.clone(), game_repo.clone()));
+    let game_repo = Arc::new(GameRepo::new(&db,purchase_repo).await);
+    let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new());
+    let game_service = Arc::new(service::game_service::GameService::new(purchase_option_service.clone(), game_repo.clone()));
+
+    let wishlist_repo = Arc::new(WishlistRepo::new(&db, game_service.clone()));
     let wishlist_service =  Arc::new(service::wishlist_service::WishlistService::new(game_service.clone(), wishlist_repo));
 
-    let game_controller = web::Data::new(crate::controller::game_controller::GameController::new(game_service.clone()));
+    let game_controller = web::Data::new(game_service.clone());
     let wishlist_controller = web::Data::new(crate::controller::wishlist_controller::WishlistController::new(wishlist_service, game_service));
+
+
+    // Make instance variable of ApiDoc so all worker threads gets the same instance.
+    let game_api = controller::game_controller::get_open_api();
+    let wishlist_api = controller::wishlist_controller::get_open_api();
+
+
     HttpServer::new(move || App::new()
         .wrap(Cors::permissive())
-        .service(crate::controller::game_controller::GameController::get_web_service(game_controller.clone()))
-        .service(crate::controller::wishlist_controller::WishlistController::get_web_service(wishlist_controller.clone()))
-        .service(stream)
+        .service(crate::controller::game_controller::get_web_service(game_controller.clone() ))
+        .service(crate::controller::wishlist_controller::get_web_service(wishlist_controller.clone()))
+        .service(
+            utoipa_swagger_ui::SwaggerUi::new("/swagger-ui/{_:.*}")
+                .urls(vec![
+                    (
+                        utoipa_swagger_ui::Url::new("game", "/api-docs/game.json"),
+                        game_api.clone(),
+                    ),
+                    (
+                        utoipa_swagger_ui::Url::new("wishlist", "/api-docs/wishlist.json"),
+                        wishlist_api.clone(),
+                    )
+                ]),
+        )
         .app_data(web::JsonConfig::default().error_handler(|err, _req| {
                   error::InternalError::from_response(
                       "",
@@ -119,6 +120,7 @@ async fn main() -> std::io::Result<()> {
 #[cfg(test)]
 mod tests{
     use std::collections::HashSet;
+    use tokio::task;
 
     use super::*;
     use crate::core::wishlist::Markets;

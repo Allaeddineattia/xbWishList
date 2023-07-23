@@ -7,18 +7,23 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-reqwest = { version = "0.10", features = ["json"] }
-tokio = { version = "0.2", features = ["full"] }
-
+reqwest = { version = "0.11.11", features = ["json"] }
+tokio = { version = "1.20.1", features = ["full"] }
+async-process = "1.6.0"
 serde_json = "1.0.64"
 serde = {version = "1.0.123", features = ["derive"] }
-chrono = "0.4"
+chrono = "0.4.24"
+bson = { features = ["chrono-0_4"] }
 anyhow = "1.0.38"
-mongodb = { version = "1.2.1", default-features = false, features = ["async-std-runtime"] }
+mongodb = { version = "2.4.0" }
+
+
 #tokio-tls = "0.3.1"
-async-trait = "0.1.50"
-phf = { version = "0.9", features = ["macros"] }
-futures = "0.1"
-actix-web = "3"
-actix-cors = "0.5.4"
+async-trait = "0.1.68"
+phf = { version = "0.11.0", features = ["macros"] }
+futures = "0.3.21"
+actix-web = "4.1.0"
+actix-cors = "0.6.1"
 regex = "1"
+utoipa-swagger-ui = { version = "3", features = ["actix-web"] }
+utoipa = { version = "3", features = ["actix_extras"] }

@@ -14,37 +14,46 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 use crate::{core::wishlist, repo::shared::Repo};
-use mongodb::bson::{doc};
+use mongodb::bson::{doc, Document};
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 use mongodb::{Collection, Database};
 use crate::core::wishlist::{ WishlistElement, Markets};
 use std::sync::Arc;
-use crate::repo::game_repo::GameRepo;
-use crate::repo::models::wishlist_model;
+use crate::service::game_service::GameService;
 use crate::repo::models::wishlist_model::{WishlistModel, WishlistElementModel, WishlistPreferencesModel};
-use crate::repo::models::game_model::FetchGame;
 
 
 pub struct  WishlistRepo{
-    data_base_collection : Collection,
+    data_base_collection : Collection<Document>,
     collection_name : String,
-    game_repo: Arc<GameRepo>
+    game_service: Arc<GameService>
 
 }
 
+impl Repo<WishlistModel> for WishlistRepo{
+    fn get_data_base_collection(&self) -> &Collection<Document> {
+        &self.data_base_collection
+    }
+
+    fn get_collection_name(&self) -> &str {
+        &self.collection_name
+    }
+}
+
+
 impl WishlistRepo {
-    pub fn new(data_base : & Database, game_repo: Arc<GameRepo>) -> Self{
+    pub fn new(data_base : & Database, game_service: Arc<GameService>) -> Self{
         let collection_name = String::from("wishlist");
         let data_base_collection = data_base.collection(&collection_name);
         Self{
             collection_name,
             data_base_collection,
-            game_repo
+            game_service
         }
     }
 
-    async fn convert_model_to_entity(&self, model: wishlist_model::WishlistModel) -> wishlist::Wishlist{
+    async fn convert_model_to_entity(&self, model: WishlistModel) -> wishlist::Wishlist{
         let preference = self.convert_model_wishlist_preferences(model.preference);
         let mut wishlist_elements = HashMap::<String, WishlistElement>::new();
         for wishlist_element_model in model.games.into_iter(){
@@ -61,36 +70,27 @@ impl WishlistRepo {
             wishlist_elements)
     }
 
-    fn convert_model_wishlist_preferences(&self, model: wishlist_model::WishlistPreferencesModel) -> wishlist::WishlistPreferences{
-        wishlist::WishlistPreferences::new(model.language,  wishlist::Markets::from_vec_str(model.markets).0)
+    fn convert_model_wishlist_preferences(&self, model: WishlistPreferencesModel) -> wishlist::WishlistPreferences{
+        wishlist::WishlistPreferences::new(model.language,  Markets::from_vec_str(model.markets).0)
     }
-    async fn convert_model_to_wishlist_element(&self, model: wishlist_model::WishlistElementModel, pref: &wishlist::WishlistPreferences)-> Option<wishlist::WishlistElement>{
+    async fn convert_model_to_wishlist_element(&self, model: WishlistElementModel, pref: &wishlist::WishlistPreferences)-> Option<WishlistElement>{
         let game_id = &model.game_id;
         let language = &pref.language;
         let markets: Markets = Markets::from_vec_str(model.markets).0;
 
-        let fetch = self.game_repo.fetch_game(game_id, language, &markets.to_vec()).await;
-
-        match fetch {
-            FetchGame::Fetched(game) => {
-                return Some(wishlist::WishlistElement::new(game, markets))
-            }
-            FetchGame::MissingMarkets(_,_) => {
-                None
-            }
-            FetchGame::MissingDescription(_,_) => {
-                None
-            }
-            FetchGame::ElementNotFound(_) => {
-                None
-            }
+        if let Some(game ) = self.game_service.get_game_info(game_id, language, &markets.to_vec()).await
+        {
+            Some(WishlistElement::new(game, markets))
         }
-
+        else
+        {
+            None
+        }
     }
 
     pub async fn fetch_by_name(&self, name: &str) -> Option<wishlist::Wishlist>{
         let query = doc! {"name": name};
-        let fetch:Option<wishlist_model::WishlistModel> = self.fetch_by_query(query).await;
+        let fetch:Option<WishlistModel> = self.fetch_by_query(query).await;
         if let Some(model) = fetch{
             Some(self.convert_model_to_entity(model).await)
         }else{
@@ -140,7 +140,7 @@ impl WishlistRepo {
         }
     }
 
-    fn element_entity_to_model(&self, wishlist_element: &wishlist::WishlistElement) -> WishlistElementModel{
+    fn element_entity_to_model(&self, wishlist_element: &WishlistElement) -> WishlistElementModel{
         let markets_vec = wishlist_element.markets.to_vec();
         let mut markets = Vec::<String>::new();
         if !markets_vec.is_empty(){
@@ -158,14 +158,5 @@ impl WishlistRepo {
 
 }
 
-impl Repo<WishlistModel> for WishlistRepo{
-    fn get_data_base_collection(&self) -> &Collection {
-        &self.data_base_collection
-    }
-
-    fn get_collection_name(&self) -> &str {
-        &self.collection_name
-    }
-}
 
 

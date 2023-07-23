@@ -13,33 +13,20 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::any::Any;
 use crate::client::input_dto::catalog_response;
-use crate::client::input_dto;
-use crate::core::game;
-use crate::repo::shared::MongoEntity;
 use crate::repo::shared::Repo;
-use mongodb::Database;
-use crate::repo::game_repo::{GameRepo, GameEntity};
-use std::collections::HashMap;
-use std::future::Future;
-use std::rc::Rc;
+use crate::repo::game_repo::{GameRepo};
 use crate::client::client_service::microsoft_api::{XboxLiveLanguage, MicrosoftApiClient, MARKETS};
-use crate::core::purchase_option::{PurchaseAvailability};
 use crate::service::purchase_option_service::PurchaseOptionService;
 use crate::core::game::Game;
-use crate::core::game::Property;
-use tokio::task;
 use std::sync::Arc;
-use anyhow::private::kind::TraitKind;
-use tokio::task::JoinHandle;
-use crate::client::input_dto::search_response::{SearchItem, SearchItemProduct};
-use crate::client::input_dto::catalog_response::Response;
+use crate::client::input_dto::search_response::{SearchItem, SearchItemProduct, SearchResponse};
 use crate::client::input_dto::leaving_soon_response::LeavingSoonResponse;
 use crate::repo::models::game_model::{FetchGame, GameModel};
+use crate::service::helpers::game_property_mapper::create_game_from_product;
+use crate::service::helpers::uri::get_uri;
 
 pub struct GameService {
-    db : Arc<Database>,
     purchase_option_service: Arc<PurchaseOptionService>,
     game_repo: Arc<GameRepo>,
     client : Arc<MicrosoftApiClient>
@@ -47,137 +34,18 @@ pub struct GameService {
 
 impl GameService{
 
-    pub fn new(db: Arc<Database>, purchase_option_service: Arc<PurchaseOptionService>, game_repo: Arc<GameRepo>) -> Self {
-        GameService { 
-            db: db.clone(), 
+    pub fn new(purchase_option_service: Arc<PurchaseOptionService>, game_repo: Arc<GameRepo>) -> Self {
+        GameService {
             purchase_option_service, 
             game_repo,
             client: Arc::new(MicrosoftApiClient::new())
         }
     }
 
-    fn get_properties(&self, properties : & input_dto::product_property::ProductProperties) -> Vec<Property>{
-        let mut result = Vec::<Property>::new();
-        if let Some(attributes) = &properties.attributes{
-            for attribute in attributes.iter(){
-                match &attribute.name[..] {
-                    "CapabilityXboxEnhanced" => {
-                        result.push(Property::XboxOneXEnhanced);
-                    },
-                    "Capability4k" => {
-                        result.push(Property::UltraHD4K);
-                    },
-                    "XboxLive" => {
-                        result.push(Property::XboxLive);
-                    },
-                    "CapabilityHDR" => {
-                        result.push(Property::HDR);
-                    },
-                    "XPA" => {
-                        result.push(Property::XboxPlayAnywhere);
-                    },
-                    "SharedSplitScreen" => {
-                        result.push(Property::SharedSplitScreen);
-                    },
-                    "CrossPlatformMultiPlayer" => {
-                        result.push(Property::CrossPlatformMultiPlayer);
-                    },
-                    "CrossPlatformCoOp" => {
-                        result.push(Property::CrossPlatformCoOp);
-                    },
-                    "VREnabled" => {
-                        result.push(Property::WindowsMixedReality);
-                    },
-                    "RayTracing" => {
-                        result.push(Property::RayTracing);
-                    },
-                    "60fps" => {
-                        result.push(Property::FPS60);
-                    },
-                    "120fps" => {
-                        result.push(Property::FPS120);
-                    },
-                    "ConsoleGen9Optimized" => {
-                        result.push(Property::OptimizedForSeriesXAndS);
-                    },
-                    "GameStreaming" => {
-                        result.push(Property::CloudEnabled);
-                    },
-                    "ConsoleCrossGen" => {
-                        result.push(Property::SmartDelivery);
-                    },
-                    "ConsoleKeyboardMouse" => {
-                        result.push(Property::ConsoleKeyboardMouse);
-                    },
-                    "PcGamePad" => {
-                        result.push(Property::PcGamePad);
-                    },
-                    "XboxLiveCrossGenMP" => {
-                        result.push(Property::CrossGenMultiPlayer);
-                    },
-                    "XblOnlineMultiPlayer" => {
-                        let min = attribute.minimum.unwrap() as u16;
-                        let max = attribute.minimum.unwrap() as u16;
-                        result.push(Property::OnlineMultiplayer(min, max));
-                    },
-                    "XblLocalMultiPlayer" => {
-                        let min = attribute.minimum.unwrap() as u16;
-                        let max = attribute.minimum.unwrap() as u16;
-                        result.push(Property::LocalMultiplayer(min, max));
-                    },
-                    "XblLocalCoop" => {
-                        let min = attribute.minimum.unwrap() as u16;
-                        let max = attribute.minimum.unwrap() as u16;
-                        result.push(Property::LocalCoop(min, max));
-                    },
-                    "XblOnlineCoop" => {
-                        let min = attribute.minimum.unwrap() as u16;
-                        let max = attribute.minimum.unwrap() as u16;
-                        result.push(Property::OnlineCoop(min, max));
-                    },
-                    _ => {}
-                };
-            }
-        };
-        result
-        
-    }
 
     fn abstract_product_to_game(&self, product: &catalog_response::Product, language: & str, market: &  XboxLiveLanguage::<'static>) -> Game{
-        let mut name = String::from("null");
-        let mut developer_name = String::from("null");
-        let mut publisher_name = String::from("null");
-        let mut poster_uri = String::from("null");
-        let mut description = String::from("null");
-        let id = product.product_id.clone();
-        for localized_properties in product.localized_properties.iter(){
-            name = localized_properties.product_title.clone();
-            if let Some(desc) = &localized_properties.product_description{
-                description = desc.clone();
-            }
-            if let Some(develop_name) = &localized_properties.developer_name {
-                developer_name = develop_name.clone();
-            }
-            if let Some(publisher) = &localized_properties.publisher_name {
-                publisher_name = publisher.clone();
-            }
-            for image in localized_properties.images.iter() {
-                if image.image_purpose == "Poster" {
-                    let uri = String::from("http:") + &image.uri;
-                    poster_uri = uri;
-                }
-            }
-        }
-
-        let store_uri = String::from("https://www.microsoft.com/") + market.local() + "/p/" +
-            &name.trim().replace(" ", "-").replace(":", "").replace("'", "")
-                .replace("|", "").replace("&", "").to_lowercase() + "/"
-            + &product.product_id;
-
-        let properties = self.get_properties(&product.properties.as_ref().unwrap());
-
-        let mut game = Game::new(id, name, publisher_name, developer_name,
-                                 poster_uri,  description, language.to_string(), properties);
+        let mut game = create_game_from_product(product, language);
+        let store_uri = get_uri(&game.name(), market.local(), &game.id());
         let sales = self.purchase_option_service.get_sales(product);
         game.add_purchase_option(market.short_id(), store_uri, sales);
         game
@@ -191,21 +59,26 @@ impl GameService{
 
     pub async fn save_game(&self, game:&Game){
         let mut game_entity: GameModel;
+        println!("fetching result game id {}", game.id());
         let fetch_result = self.game_repo.fetch_by_id(game.id()).await;
+
         if let Some(entity) = fetch_result{
+            println!("result fetched entity id {}", &entity.id);
             game_entity = entity;
         }else{
             game_entity = GameModel::new(game.id());
         }
-        game_entity.add_info(game);
+        game_entity.add_info(game).expect("TODO: panic message");
+
         self.game_repo.save(&game_entity).await;
     }
 
     pub async fn save_response(&self, result: &catalog_response::Response, language: & str, market: &  XboxLiveLanguage::<'static>) -> anyhow::Result<()>
     {
+
         for product in result.products.iter(){
-            let result: game::Game = self.abstract_product_to_game(product, language, market);
-            self.save_game(&result).await;
+            println!("saving result with product with id {}", product.product_id);
+            self.save_game(&(self.abstract_product_to_game(product, language, market))).await;
         }
         Ok(())
     }
@@ -225,17 +98,22 @@ impl GameService{
         for market in markets{
             let market = MARKETS.get(market);
             if let Some(market) = market{
-                if let Ok(result) = self.client.get_games(vec![id.to_string()], market.local(), market.short_id()).await{
-
-                    self.save_response(&result, market.local(), market).await.expect("TODO: panic message");
-
-                }
+                self.save_result(&id, market).await;
             }
         }
 
     }
 
-    pub async fn get_game_pass_leaving_soon(&self, language: Option<& str>, markets: Option<&Vec<& str>>)-> Vec<Game>
+    async fn save_result(&self, id: &str, market: &  XboxLiveLanguage::<'static>)
+    {
+        if let Ok(result) = self.client.get_games(vec![id.to_string()], market.local(), market.short_id()).await{
+
+            self.save_response(&result, market.local(), market).await.expect("TODO: panic message");
+
+        }
+    }
+
+    pub async fn get_game_pass_leaving_soon(&self, language: Option<& str> )-> Vec<Game>
     {
         let language = language.unwrap_or_else(|| { "en-US" });
         let markets = vec!["US"];
@@ -257,66 +135,38 @@ impl GameService{
 
     pub async fn get_game_info(&self, id:&str , language: & str, markets: &Vec<& str>) -> Option<Game>{
         let id = &id.to_uppercase()[..];
-        let mut description_is_cured = false;
-        let mut missing_markets_are_cured = false;
-        let mut not_found = false;
-        while !description_is_cured || !missing_markets_are_cured || !not_found{
-            let game = self.game_repo.fetch_game(id, language, &markets).await;
-            match game{
-                FetchGame::ElementNotFound(error_message)=>{
-                    println!("element is missing {} ", error_message);
-                    if description_is_cured{
-                        println!("no game found with this id {}", id);
-                        not_found = true;
-                    }
-
-                    if !description_is_cured{
-                        self.cure_description_missing(id, language).await;
-                    }
-                    description_is_cured = true;
-                    if !missing_markets_are_cured{
-                        self.cure_markets_missing(id, &markets).await;
-                    }
-                    missing_markets_are_cured = true;
-                    
-                },
-                FetchGame::Fetched(game)=>{
-                    println!("\n-----------------\n");
-                    game.print_price();
-                    return Some(game);
-                }
-                FetchGame::MissingDescription(_,language)=>{
-                    if description_is_cured{
-                        println!("couldn't find a discription of game with id {} for language {}", id, language);
-                        return None;
-                    };
-                    self.cure_description_missing(id, language).await;
-                    description_is_cured = true;
-                }
-                FetchGame::MissingMarkets(_,missing_markets)=>{
-                    if missing_markets_are_cured{
-                        println!("the game with id {} is not supported in the following markets {:#?}", id, missing_markets);
-                        return None;
-                    };
-                    self.cure_markets_missing(id, &missing_markets).await;
-                    missing_markets_are_cured = true;
-                }
-            }
+        let fetched_game = self.game_repo.fetch_game(id, language, &markets).await;
+        if let FetchGame::Fetched(game) = fetched_game
+        {
+            println!("\n-----------------\n");
+            game.print_price();
+            return Some(game);
         };
-        None
+        self.cure_description_missing (id, language).await;
+        self.cure_markets_missing(id, &markets).await;
+        self.get_game_if_exists(id, language, markets).await
         
     }
 
+    async fn get_game_if_exists(&self, id:&str , language: & str, markets: &Vec<& str>) -> Option<Game>
+    {
+        if let FetchGame::Fetched(game) = self.game_repo.fetch_game(id, language, &markets).await
+        {
+            println!("\n-----------------\n");
+            game.print_price();
+            return Some(game);
+        }
+        None
+    }
+
+    /*
     async fn get_game_info_from_all_markets(&self, id: &str){
         for market in MARKETS.into_iter(){
             let market = market.1;
-            if let Ok(result) = self.client.get_games(vec![id.to_string()], market.local(), market.short_id()).await
-            {
-                self.save_response(&result, market.local(), market).await.expect("TODO: panic message");
-            }
+            self.save_result(id, market).await;
         }
     }
-
+    */
     fn id_exists_in_games(id: &str, games: & Vec<Game>) -> bool{
         for game in games{
             if id == game.id() {
@@ -327,67 +177,86 @@ impl GameService{
     }
 
     pub async fn search_by_name(&self, query: &str, language: &str, markets: Vec<& str>)-> Vec<Game>{
-        let entities = self.game_repo.search_by_name(query, language, &markets).await;
-        let mut games = Vec::<Game>::new();
-        for game in entities{
-            self.insert_game(&mut games, game, language, &markets).await;
-        };
+
+        let mut games = self.fetch_games_by_name(query, language, &markets).await;
 
         let result = self.client.search_games(query, "en-US", "US").await;
-        if let Ok(search_response) = result{
-            for item in search_response.results.into_iter(){
-                for mut product in item.products.into_iter(){
-                    product.icon = "https:".to_string() + &product.icon;
-                    println!("product found \nid: {} \ntitle: {} \nimage url: {}", product.product_id, product.title, product.icon);
-                    if ! Self::id_exists_in_games(&product.product_id,&games){
-                        let game = self.get_game_info(&product.product_id, language, &markets).await;
-                        if let Some(game) = game{
-                            games.push(game);
-                        };
-                    }
-                }
+        if let Ok(mut search_response) = result{
+            let mut v = self.parse_search_response(& mut search_response, language, &markets).await;
+            games.append(& mut v);
+        };
+        games
+    }
+
+    async fn fetch_games_by_name(&self, query: &str, language: &str, markets: &Vec<& str>)->Vec<Game>
+    {
+        let mut games = Vec::<Game>::new();
+        let entities = self.game_repo.search_by_name(query, language, &markets).await;
+        for fetched_game in entities{
+            if let Some(game) = self.fetch_game_by_name(fetched_game, language, markets).await
+            {
+                games.push(game);
             }
         };
         games
     }
 
-    async fn insert_game<'a>(&self, vec: & mut Vec<Game>, mut game:  FetchGame<'a>, language: &str, markets: &Vec<& str>){
-        let mut description_is_cured = false;
-        let mut missing_markets_are_cured = false;
-        while !description_is_cured || !missing_markets_are_cured {
-            match game{
-                FetchGame::ElementNotFound(error_message)=>{
-                    break;
-                },
-                FetchGame::Fetched(game)=>{
-                    println!("\n-----------------\n");
-                    game.print_price();
-                    vec.push(game);
-                    break;
-                }
-                FetchGame::MissingDescription(id, language)=>{
-                    if description_is_cured{
-                        println!("couldn't find a discription of game with id {} for language {}", &id, language);
-                        break;
-                    };
-                    self.cure_description_missing(&id, language).await;
-                    description_is_cured = true;
-                    game = self.game_repo.fetch_game(&id, language, markets).await;
-                    
-                }
-                FetchGame::MissingMarkets(id,missing_markets)=>{
-                    if missing_markets_are_cured{
-                        println!("the game with id {} is not supported in the following markets {:#?}", &id, missing_markets);
-                        break;
-                    };
-                    self.cure_markets_missing(&id, &missing_markets).await;
-                    missing_markets_are_cured = true;
-                    game = self.game_repo.fetch_game(&id, language, markets).await;
-                }
-            }
-            
-       }
+    async fn fetch_game_by_name<'a>(&self, fetched_game:  FetchGame<'a>, language: &str, markets: &Vec<& str>)-> Option<Game>{
+        if let FetchGame::Fetched(game) = fetched_game
+        {
+            println!("\n-----------------\n");
+            game.print_price();
+            return Some(game);
+        }
+        else if let FetchGame::ElementNotFound(_) = fetched_game
+        {
+            return None;
+        }
+        else if let FetchGame::MissingDescription(id, missing_language) = fetched_game
+        {
+            self.cure_description_missing(&id, missing_language).await;
+            return self.get_game_if_exists(&id, language, markets).await;
+        }
+        else if let FetchGame::MissingMarkets(id,missing_markets) = fetched_game
+        {
+            self.cure_markets_missing(&id, &missing_markets).await;
+            return self.get_game_if_exists(&id, language, markets).await;
+        }
+
+        None
     }
+
+
+
+    async fn parse_search_response(&self, search_response: & mut SearchResponse,  language: &str, markets: &Vec<& str>) -> Vec<Game>
+    {
+        let mut games = Vec::<Game>::new();
+        let results = & mut search_response.results;
+        for mut item in results.into_iter()
+        {
+            let mut v = self.parse_item(& mut item, language, markets).await;
+            games.append(&mut v);
+        };
+        games
+    }
+
+    async fn parse_item(&self, item_product: &mut SearchItem, language: &str, markets: &Vec<& str>) -> Vec<Game>
+    {
+        let mut games = Vec::<Game>::new();
+        let products = & mut item_product.products;
+        for mut product in products.into_iter(){
+            product.icon = format!("https:{}", &product.icon);
+            println!("product found \nid: {} \ntitle: {} \nimage url: {}", product.product_id, product.title, product.icon);
+            if ! Self::id_exists_in_games(&product.product_id,&games){
+                let game = self.get_game_info(&product.product_id, language, &markets).await;
+                if let Some(game) = game{
+                    games.push(game);
+                };
+            }
+        }
+        games
+    }
+
 
     pub async fn search_game(&self, query: &str, language: &str) -> Vec<SearchItemProduct> {
         let market = MARKETS.get(language);

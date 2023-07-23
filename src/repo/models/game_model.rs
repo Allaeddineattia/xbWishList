@@ -1,13 +1,47 @@
 use std::collections::HashMap;
+use std::ops::Add;
+use chrono::{DateTime, Duration, Timelike, TimeZone, Utc};
+use mongodb::bson;
 use crate::core::game::{GameDescription, PurchaseOption, Game};
 use crate::repo::shared::{MongoEntity, UniqueEntity};
-use mongodb::bson::{doc,Document, Bson};
+use mongodb::bson::{doc, Document, Bson};
 use crate::core::purchase_option::PurchaseAvailability;
 
 pub struct GameModel{
     pub id: String,
     pub descriptions: HashMap<String, GameDescription>,
     pub purchase_options: HashMap<String, PurchaseOption>,
+    pub expire_at: DateTime<Utc>,
+}
+
+impl MongoEntity for GameModel {
+
+    fn to_document(&self) -> Document {
+        let purchase_options: Vec<Document> = self.get_purchase_options();
+
+        let descriptions: Vec<Document> = self.get_descriptions();
+
+        doc!{
+            "id" : &self.id,
+            "descriptions": descriptions,
+            "purchase_options" : purchase_options,
+            "expire_at" : mongodb::bson::DateTime::from_chrono( self.expire_at)
+        }
+    }
+
+    fn from_document(doc: &Document) -> GameModel {
+        let id = String::from(doc.get_str("id").unwrap());
+        let descriptions = Self::descriptions_from_document_array(doc.get_array("descriptions").unwrap());
+        let purchase_options = Self::purchase_options_from_document(doc.get_array("purchase_options").unwrap());
+        let expire_at: DateTime<Utc> = doc.get_datetime("expire_at").unwrap().clone().into();
+
+        return GameModel{
+            id,
+            descriptions,
+            purchase_options,
+            expire_at
+        }
+    }
 }
 
 impl GameModel{
@@ -15,8 +49,7 @@ impl GameModel{
         if &self.id != game.id() {
             return Err("not compatible ");
         };
-        let g = (*game.description()).clone();
-        self.descriptions.insert(game.description_language().to_string(), g);
+        self.descriptions.insert(game.description_language().to_string(), game.description().clone());
         for option in game.purchase_options(){
             let o = (*option.1).clone();
             self.purchase_options.insert(option.0.to_string(), o);
@@ -24,15 +57,70 @@ impl GameModel{
         Ok(())
     }
 
+    fn get_expire_at() -> DateTime<Utc>
+    {
+        let time = Utc::now().naive_utc().date().and_hms_opt(8, 0, 0).unwrap();
+        if Utc::now().hour() < 8
+        {
+            Utc.from_utc_datetime(&time)
+        } else
+        {
+            Utc.from_utc_datetime(&time).add(Duration::days(1))
+        }
+    }
+
     pub fn new(id: &str) -> Self{
         Self{
             id: id.to_string(),
             descriptions: HashMap::<String, GameDescription>::new(),
-            purchase_options: HashMap::<String, PurchaseOption>::new()
+            purchase_options: HashMap::<String, PurchaseOption>::new(),
+            expire_at: Self::get_expire_at(),
         }
     }
 
+
+
+    fn get_purchase_options(&self) -> Vec<Document>
+    {
+        self.purchase_options.iter().map(
+            |purchase_option| {
+                let options: Vec<Document> = (&purchase_option.1.purchase_availabilities).into_iter().map(
+                    |availability|{
+                        availability.to_document()
+                    }
+                ).collect();
+                doc! {
+                        "market": purchase_option.0,
+                        "store_uri": &purchase_option.1.store_uri,
+                        "availabilities": options,
+                    }
+            }
+        ).collect()
+    }
+
+    fn get_descriptions(&self) -> Vec<Document>
+    {
+        self.descriptions.iter().map(
+            |pair| {
+                let desc = pair.1;
+                doc! {
+                "language": pair.0,
+                "body": doc!{
+                    "name" : &desc.name,
+                    "publisher" : &desc.publisher,
+                    "developer" : &desc.developer,
+                    "description" : &desc.description,
+                    "poster_uri" : &desc.poster_uri,
+                    },
+                }
+            }
+        ).collect()
+    }
+
+
+
     pub fn get_game<'a>(mut self, language: & 'a str, markets: &Vec<& 'a str>)-> FetchGame<'a>{
+
         let game_description = self.descriptions.remove(language);
 
         if let Some(game_description) = game_description {
@@ -64,63 +152,12 @@ impl GameModel{
 
     }
 
-}
-
-pub enum FetchGame<'a>{
-    Fetched(Game),
-    MissingMarkets(String,Vec<& 'a str>),
-    MissingDescription(String,& 'a str),
-    ElementNotFound(String),
-}
-
-impl MongoEntity for GameModel {
-
-    fn to_document(&self) -> Document {
-        let purchase_options: Vec<Document> = (self.purchase_options).iter().map(
-            |purchase_option| {
-                let options: Vec<Document> = (&purchase_option.1.purchase_availabilities).into_iter().map(
-                    |availability|{
-                        availability.to_document()
-                    }
-                ).collect();
-                doc! {
-                    "market": purchase_option.0,
-                    "store_uri": &purchase_option.1.store_uri,
-                    "availabilities": options,
-                }
-            }
-        ).collect();
-
-        let descriptions: Vec<Document> = (self.descriptions).iter().map(
-            |pair| {
-                let desc = pair.1;
-                doc! {
-                "language": pair.0,
-                "body": doc!{
-                    "name" : &pair.1.name,
-                    "publisher" : &pair.1.publisher,
-                    "developer" : &pair.1.developer,
-                    "description" : &pair.1.description,
-                    "poster_uri" : &pair.1.poster_uri,
-                    },
-                }
-            }
-        ).collect();
-
-
-        doc!{
-            "id" : &self.id,
-            "descriptions": descriptions,
-            "purchase_options" : purchase_options,
-        }
-    }
-
-    fn from_document(doc: &Document) -> GameModel {
-        let id = String::from(doc.get_str("id").unwrap());
+    fn descriptions_from_document_array(description_array: &bson::Array)->HashMap<String, GameDescription>
+    {
         let mut game_descriptions: HashMap<String, GameDescription> = HashMap::new();
 
-        for description in doc.get_array("descriptions").unwrap().into_iter(){
-            if let Bson::Document(desc) = description{
+        for bson in description_array.into_iter(){
+            if let Bson::Document(desc) = bson{
                 let body = desc.get_document("body").unwrap();
                 game_descriptions.insert(
                     desc.get_str("language").unwrap().to_string(),
@@ -134,10 +171,14 @@ impl MongoEntity for GameModel {
                 );
             };
         };
+        game_descriptions
+    }
 
+    fn purchase_options_from_document(purchase_options_array: &bson::Array) -> HashMap<String, PurchaseOption>
+    {
         let mut purchase_options: HashMap<String, PurchaseOption> = HashMap::new();
 
-        for bson in  doc.get_array("purchase_options").unwrap().into_iter(){
+        for bson in  purchase_options_array.into_iter(){
             if let Bson::Document(document) = bson{
                 let market = document.get_str("market").unwrap().to_string();
                 let store_uri = document.get_str("store_uri").unwrap().to_string();
@@ -160,16 +201,42 @@ impl MongoEntity for GameModel {
                 purchase_options.insert(market, purchase_option);
             }
         };
-        return GameModel{
-            id,
-            descriptions: game_descriptions,
-            purchase_options
-        }
+        purchase_options
     }
+
 }
+
+pub enum FetchGame<'a>{
+    Fetched(Game),
+    MissingMarkets(String,Vec<& 'a str>),
+    MissingDescription(String,& 'a str),
+    ElementNotFound(String),
+}
+
+
 
 impl UniqueEntity for GameModel{
     fn get_unique_selector(&self) -> Document {
         doc! {"id": &self.id}
+    }
+}
+
+////  -------------------------------- Tests
+///
+///
+///
+///
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+    use chrono::Timelike;
+
+    use super::*;
+    use crate::core::wishlist::Markets;
+
+    #[test]
+    fn test_date(){
+        let limit = GameModel::get_expire_at();
+        println!("{}",limit.to_string());
     }
 }

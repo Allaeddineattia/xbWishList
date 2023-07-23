@@ -12,10 +12,12 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-use mongodb::bson::{Bson,Document, doc};
+use mongodb::bson::{Bson,Document};
 use mongodb::{Collection, Cursor};
 use async_trait::async_trait;
-use tokio::stream::StreamExt;
+use futures::StreamExt;
+use mongodb::error::Result;
+
 pub trait MongoEntityRepo<T> where T: Sync + Send{
     fn entity_to_document(&self, entity: &T)-> Document;
     fn create_entity_from_document(&self, doc : &Document) -> T;
@@ -39,12 +41,12 @@ pub trait UniqueEntity{
 #[async_trait]
 pub trait  Repo <T> where T: Sync + Send + MongoEntity + UniqueEntity
 {
-    fn get_data_base_collection(&self) -> & Collection;
+    fn get_data_base_collection(&self) -> & Collection<Document>;
     fn get_collection_name(&self) -> & str;
     async fn save(&self, entity: & T){
         let option = self.fetch(entity).await;
-        if let Some(document) = option{
-            let res = self.get_data_base_collection().update_one(entity.get_unique_selector(), entity.to_document(), None).await;
+        if let Some(_) = option{
+            let res = self.get_data_base_collection().replace_one(entity.get_unique_selector(), entity.to_document(), None).await;
             let id = res.unwrap().upserted_id;
             if let Some(bson) = id {
                 if let Bson::ObjectId(id) = bson{
@@ -100,29 +102,24 @@ pub trait  Repo <T> where T: Sync + Send + MongoEntity + UniqueEntity
 
     async fn fetch_all(&self)-> Vec<T>{
         let data_base_collection = self.get_data_base_collection();
+        Self::result_to_vector(data_base_collection.find(None, None).await).await
+    }
+
+    async fn fetch_many_by_query(&self, query: Document)-> Vec<T>{
+        let data_base_collection = self.get_data_base_collection();
+        Self::result_to_vector( data_base_collection.find(query,None).await).await
+
+    }
+
+    async fn result_to_vector(result: Result<Cursor<Document>>) ->Vec<T>
+    {
         let mut vector = Vec::<T>::new();
-        let result = data_base_collection.find(None, None).await;
         if let Ok(mut cursor) = result{
             while let Some(doc) = cursor.next().await {
                 if let Ok(doc )=doc{
                     vector.push(T::from_document(&doc));
                 };
-              };
-        };
-        vector
-        
-    }
-
-    async fn fetch_many_by_query(&self, query: Document)-> Vec<T>{
-        let data_base_collection = self.get_data_base_collection();
-        let mut vector = Vec::<T>::new();
-        let query_result = data_base_collection.find(query,None).await;
-        if let Ok(mut cursor) = query_result{
-            while let Some(doc) = cursor.next().await {
-                if let Ok(doc )=doc{
-                    vector.push(T::from_document(&doc));
-                };
-              };
+            };
         };
         vector
     }

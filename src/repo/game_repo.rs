@@ -13,25 +13,18 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::core::game::{Game, PurchaseOption, GameDescription};
-use crate::repo::shared::{MongoEntity, Repo, UniqueEntity, MongoEntityRepo, UniqueEntityRepo};
+use crate::repo::shared::{Repo};
 use super::shared;
-use crate::core::purchase_option::PurchaseAvailability;
-use mongodb::bson::{doc,Document, Bson};
-use mongodb::{Collection, Database};
-use std::collections::HashMap;
+use mongodb::bson::{doc, Document};
+use mongodb::{Collection, Database, IndexModel};
+use mongodb::options::{IndexOptions};
 use crate::repo::purchase_option_repo::PurchaseAvailabilityRepo;
 use crate::repo::models::game_model::{FetchGame, GameModel};
 
 
-pub struct GameEntity{
-    pub id: String,
-    pub descriptions: HashMap<String, GameDescription>,
-    pub purchase_options: HashMap<String, PurchaseOption>,
-}
 
 pub struct  GameRepo{
-    data_base_collection : Collection,
+    data_base_collection : Collection<Document>,
     collection_name : String,
     purchase_availability_repo: PurchaseAvailabilityRepo
 }
@@ -39,10 +32,16 @@ pub struct  GameRepo{
 
 
 impl GameRepo{
-    pub fn new(data_base : & Database, purchase_availability_repo: PurchaseAvailabilityRepo) -> GameRepo{
+    pub async fn new(data_base : & Database, purchase_availability_repo: PurchaseAvailabilityRepo) -> GameRepo{
         let collection_name = String::from("game");
         let data_base_collection = data_base.collection(&collection_name);
+        let index_model = IndexModel::builder()
+            .keys(doc! { "expire_at": 1 })
+            .options(IndexOptions::builder().expire_after(std::time::Duration::from_secs(0)).build())
+            .build();
 
+        let expire_index_result = data_base_collection.create_index(index_model, None).await.expect("Failed to create the index.");
+        println!("index created with name {}", expire_index_result.index_name);
         GameRepo{
             data_base_collection,
             collection_name,
@@ -95,7 +94,7 @@ impl GameRepo{
 
 
 impl shared::Repo<GameModel> for GameRepo{
-    fn get_data_base_collection(&self) -> & Collection {
+    fn get_data_base_collection(&self) -> & Collection<Document> {
         & self.data_base_collection
     }
     fn get_collection_name(&self) -> & str{

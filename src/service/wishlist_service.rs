@@ -13,9 +13,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 use super::game_service::GameService;
-use crate::{core::wishlist::Wishlist, repo::shared::Repo};
-use std::rc::Rc;
-use mongodb::Database;
+use crate::{core::wishlist::Wishlist};
 use crate::repo::wishlist_repo;
 use std::sync::Arc;
 
@@ -43,12 +41,13 @@ impl  WishlistService {
 
     pub async fn save(&self, wishlist: &Wishlist){
         self.wishlist_repo.save_wishlist(wishlist).await;
-        if let Some (wishlist_result) = self.wishlist_repo.fetch_by_name(&wishlist.name).await{
+        if let Some (_) = self.wishlist_repo.fetch_by_name(&wishlist.name).await{
             println!("Element saved correctly");
         }else {
             println!("couldn't save the file ")
         }
-    } 
+    }
+
 
     pub async fn get_wishlist(&self, name: &str) -> Option<Wishlist>{
         self.wishlist_repo.fetch_by_name(name).await

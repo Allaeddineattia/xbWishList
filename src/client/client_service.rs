@@ -12,7 +12,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
+#![allow(dead_code)]
 pub mod microsoft_api{
     use reqwest::StatusCode;
     use reqwest::Url;
@@ -194,7 +194,7 @@ pub mod microsoft_api{
                         }
                         Err(e) =>
                             {
-                                eprintln!("{}", e);
+                                eprintln!("hehi hehi gadek behi {}", e);
                                 Err(anyhow::Error::from(e))
                             }
                     }

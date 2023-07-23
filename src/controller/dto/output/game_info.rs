@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
-use serde_json;
 use chrono::{DateTime, Utc};
 use crate::client::shared::my_date_format;
+use utoipa::{ToSchema};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct GameInfo{
     pub id: String,// Id
@@ -34,7 +34,7 @@ impl GameInfo{
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct PurchaseOption{
     pub market: String,
@@ -52,7 +52,7 @@ impl PurchaseOption{
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct Availability{
     pub sale_state: String,

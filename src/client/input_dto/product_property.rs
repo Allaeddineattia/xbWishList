@@ -15,6 +15,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 use serde_json::{Value};
 use serde::{Deserialize, Serialize};
 
+
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct ProductProperties{
@@ -59,7 +60,7 @@ pub struct Attribute{
     pub group: Option<Value>,
 }
 
-
+#[allow(dead_code)]
 pub const PROPERTY_NAMES: phf::Map<&'static str, &'static str> = phf::phf_map!{
     "CapabilityXboxEnhanced" => "Xbox One X Enhanced",
     "Capability4k" => "4K Ultra HD",

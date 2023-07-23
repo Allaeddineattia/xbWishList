@@ -13,8 +13,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::client::input_dto::catalog_response;
-use super::purchase_option;
 use crate::core::purchase_option::{PurchaseAvailability};
 use std::collections::HashMap;
 
@@ -129,7 +127,7 @@ impl Game{
     pub fn description_language(&self) -> &str{&self.game_description.0}
 
 
-    
+    #[allow(dead_code)]
     pub fn print(&self){
         println!("  id:               {}", self.id);
         println!("  name:             {}", self.game_description.1.name);

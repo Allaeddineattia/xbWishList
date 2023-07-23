@@ -66,7 +66,7 @@ impl Wishlist {
             }
             false
         } else {
-            let mut game_markets: Markets;
+            let game_markets: Markets;
             if let Some(markets) = markets {
                 game_markets = markets;
             } else {
@@ -132,21 +132,6 @@ impl Markets{
         (markets, invalid_markets)
     }
 
-    pub fn new()->Self{
-        Self{
-            markets: HashSet::<String>::new()
-        }
-    }
-
-    pub fn add_market(&mut self, market: String){
-        let market_opt = MARKETS.get(&market);
-        if let Some(_) = market_opt{
-            self.markets.insert(market);
-        }else {
-            println!("market <{}> is not supported", market);
-        }
-    }
-
     pub fn equal(&self,  rhs: &Self) -> bool{
         self.markets == rhs.markets
     }
@@ -155,8 +140,5 @@ impl Markets{
         self.markets.iter().map(|s|{&s[..]}).collect()
     }
 
-    pub fn remove_market(&mut self, market: &str) -> bool{
-        self.markets.remove(market)
-    }
 
 }

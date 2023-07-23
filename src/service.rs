@@ -15,3 +15,4 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pub mod game_service;
 pub mod purchase_option_service;
 pub mod wishlist_service;
+pub mod helpers;

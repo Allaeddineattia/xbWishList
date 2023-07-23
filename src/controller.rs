@@ -14,5 +14,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 pub mod game_controller;
 mod dto;
+mod errors;
 pub mod wishlist_controller;
 

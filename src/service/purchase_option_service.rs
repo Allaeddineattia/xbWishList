@@ -13,20 +13,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::rc::Rc;
-use mongodb::Database;
 use crate::client::input_dto::catalog_response;
 use crate::core::purchase_option::{PurchaseAvailability};
-use crate::client::client_service::microsoft_api::XboxLiveLanguage;
-use std::sync::Arc;
 
 pub struct PurchaseOptionService {
-    db : Arc<Database>,
 }
 
 impl PurchaseOptionService{
-    pub fn new(db: Arc<Database>) -> Self {
-        PurchaseOptionService { db }
+    pub fn new() -> Self {
+        PurchaseOptionService { }
     }
 
     pub fn get_sales(&self,product: &catalog_response::Product) -> Vec<PurchaseAvailability>{

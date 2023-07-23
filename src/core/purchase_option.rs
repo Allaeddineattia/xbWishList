@@ -135,8 +135,8 @@ impl PurchaseAvailability {
             sale_price : 0.0,
             discount_ratio : 0,
             currency : String::from("USD"),
-            start_date: DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(61, 0), Utc),
-            end_date: DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(61, 0), Utc),
+            start_date: DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp_opt(61, 0).unwrap(), Utc),
+            end_date: DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp_opt(61, 0).unwrap(), Utc),
         };
 
         if let Some(condition) = &availability.conditions{
