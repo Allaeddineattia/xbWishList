@@ -26,4 +26,4 @@ actix-web = "4.1.0"
 actix-cors = "0.6.1"
 regex = "1"
 utoipa-swagger-ui = { version = "3", features = ["actix-web"] }
-utoipa = { version = "3", features = ["actix_extras"] }
+utoipa = { version = "3", features = ["actix_extras", "chrono"] }

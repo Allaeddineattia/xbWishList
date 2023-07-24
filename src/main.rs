@@ -15,16 +15,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 
-mod client;
-mod core;
-mod repo;
-mod service;
-mod controller;
+mod game;
+mod shared;
+mod wishlist;
 
 use mongodb::{Client, options::ClientOptions};
 use actix_web::{ App, HttpResponse, HttpServer, web, error};
 use actix_cors::Cors;
 use utoipa_swagger_ui;
+
+use std::sync::Arc;
+use crate::game::{GameRepo, GameService};
+use crate::wishlist::{ WishlistRepo, WishlistService};
+use crate::wishlist::controller::WishlistController;
 
 async fn init_db() -> anyhow::Result<Client>{
     let mut client_options = ClientOptions::parse("mongodb://localhost:27017").await?;
@@ -33,10 +36,7 @@ async fn init_db() -> anyhow::Result<Client>{
 }
 
 
-use std::sync::Arc;
-use crate::repo::game_repo::GameRepo;
-use crate::repo::purchase_option_repo::PurchaseAvailabilityRepo;
-use crate::repo::wishlist_repo::WishlistRepo;
+
 
 
 #[actix_web::main]
@@ -44,27 +44,24 @@ async fn main() -> std::io::Result<()> {
 
     let client = init_db().await.unwrap();
     let db = Arc::new(client.database("xbWishlist"));
-    let purchase_repo = PurchaseAvailabilityRepo::new();
-    let game_repo = Arc::new(GameRepo::new(&db,purchase_repo).await);
-    let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new());
-    let game_service = Arc::new(service::game_service::GameService::new(purchase_option_service.clone(), game_repo.clone()));
+    let game_repo = Arc::new(GameRepo::new(&db).await);
+    let game_service = Arc::new(GameService::new(game_repo.clone()));
+    let game_controller = web::Data::new(game_service.clone() );
 
     let wishlist_repo = Arc::new(WishlistRepo::new(&db, game_service.clone()));
-    let wishlist_service =  Arc::new(service::wishlist_service::WishlistService::new(game_service.clone(), wishlist_repo));
-
-    let game_controller = web::Data::new(game_service.clone());
-    let wishlist_controller = web::Data::new(crate::controller::wishlist_controller::WishlistController::new(wishlist_service, game_service));
+    let wishlist_service =  Arc::new(WishlistService::new(game_service.clone(), wishlist_repo));
+    let wishlist_controller = web::Data::new(WishlistController::new(wishlist_service, game_service));
 
 
     // Make instance variable of ApiDoc so all worker threads gets the same instance.
-    let game_api = controller::game_controller::get_open_api();
-    let wishlist_api = controller::wishlist_controller::get_open_api();
+    let game_api = game::controller::get_open_api();
+    let wishlist_api = wishlist::controller::get_open_api();
 
 
     HttpServer::new(move || App::new()
         .wrap(Cors::permissive())
-        .service(crate::controller::game_controller::get_web_service(game_controller.clone() ))
-        .service(crate::controller::wishlist_controller::get_web_service(wishlist_controller.clone()))
+        .service(game::controller::get_web_service(game_controller.clone() ))
+        .service(wishlist::controller::get_web_service(wishlist_controller.clone()))
         .service(
             utoipa_swagger_ui::SwaggerUi::new("/swagger-ui/{_:.*}")
                 .urls(vec![
@@ -124,6 +121,7 @@ mod tests{
 
     use super::*;
     use crate::core::wishlist::Markets;
+    use crate::game::xbox_api_client::markets::MARKETS;
 
     #[tokio::test]
     async fn  test_game_get_info()-> Result<(), Box<dyn std::error::Error>>{
@@ -131,7 +129,7 @@ mod tests{
         let client = init_db_task.await??;
         let db = Arc::new(client.database("xbWishlist"));
         let purchase_repo = PurchaseAvailabilityRepo::new();
-        let game_repo = Arc::new(GameRepo::new(&db,purchase_repo));
+        let game_repo = Arc::new(GameRepo::new(&db ));
 
 
         let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
@@ -145,7 +143,7 @@ mod tests{
         let client = init_db_task.await??;
         let db = Arc::new(client.database("xbWishlist"));
         let purchase_repo = PurchaseAvailabilityRepo::new();
-        let game_repo = Arc::new(GameRepo::new(&db,purchase_repo));
+        let game_repo = Arc::new(GameRepo::new(&db));
 
 
         let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
@@ -160,7 +158,7 @@ mod tests{
         let client = init_db_task.await??;
         let db = Arc::new(client.database("xbWishlist"));
         let purchase_repo = PurchaseAvailabilityRepo::new();
-        let game_repo = Arc::new(GameRepo::new(&db,purchase_repo));
+        let game_repo = Arc::new(GameRepo::new(&db));
 
         let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone(), game_repo.clone());
@@ -174,7 +172,7 @@ mod tests{
         let client = init_db_task.await??;
         let db = Arc::new(client.database("xbWishlist"));
         let purchase_repo = PurchaseAvailabilityRepo::new();
-        let game_repo = Arc::new(GameRepo::new(&db,purchase_repo));
+        let game_repo = Arc::new(GameRepo::new(&db));
 
         let purchase_option_service = Arc::new(service::purchase_option_service::PurchaseOptionService::new(db.clone()));
         let game_service = service::game_service::GameService::new(db.clone(), purchase_option_service.clone(), game_repo.clone());
