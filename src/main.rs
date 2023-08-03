@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 mod game;
 mod shared;
 mod wishlist;
+use std::env;
 
 use mongodb::{Client, options::ClientOptions};
 use actix_web::{ App, HttpResponse, HttpServer, web, error};
@@ -30,7 +31,11 @@ use crate::wishlist::{ WishlistRepo, WishlistService};
 use crate::wishlist::controller::WishlistController;
 
 async fn init_db() -> anyhow::Result<Client>{
-    let mut client_options = ClientOptions::parse("mongodb://localhost:27017").await?;
+    // Read the environment variable "MONGODB_URL"
+    let mongodb_url = env::var("MONGODB_URL").unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
+
+    println!("{}", mongodb_url);
+    let mut client_options = ClientOptions::parse(mongodb_url).await.expect("Failed to parse MongoDB connection options");
     client_options.app_name = Some("XbWishList".to_string());
     Ok(Client::with_options(client_options)?)
 }
@@ -45,18 +50,25 @@ async fn main() -> std::io::Result<()> {
     let client = init_db().await.unwrap();
     let db = Arc::new(client.database("xbWishlist"));
     let game_repo = Arc::new(GameRepo::new(&db).await);
+    println!("game repo started");
     let game_service = Arc::new(GameService::new(game_repo.clone()));
+    println!("game service started");
     let game_controller = web::Data::new(game_service.clone() );
+    println!("game controller started");
 
     let wishlist_repo = Arc::new(WishlistRepo::new(&db, game_service.clone()));
+    println!("wishlist repo started");
     let wishlist_service =  Arc::new(WishlistService::new(game_service.clone(), wishlist_repo));
+    println!("wishlist service started");
     let wishlist_controller = web::Data::new(WishlistController::new(wishlist_service, game_service));
-
+    println!("wishlist controller started");
 
     // Make instance variable of ApiDoc so all worker threads gets the same instance.
     let game_api = game::controller::get_open_api();
     let wishlist_api = wishlist::controller::get_open_api();
-
+    
+    let web_service_url = env::var("WEB_SERVICE_URL").unwrap_or_else(|_| "127.0.0.1:8080".to_string());
+    println!("starting web service on {} , swagger documentation available on {}/swagger-ui/", &web_service_url, &web_service_url);
 
     HttpServer::new(move || App::new()
         .wrap(Cors::permissive())
@@ -85,9 +97,10 @@ async fn main() -> std::io::Result<()> {
                       .into()
                   }))
     )
-        .bind("127.0.0.1:8080")?
+        .bind(&web_service_url)?
         .run()
         .await
+
 }
 
 
