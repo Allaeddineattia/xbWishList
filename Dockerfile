@@ -1,4 +1,5 @@
 FROM rust:1.71.0 as builder
+LABEL authors="https://github.com/Allaeddineattia"
 RUN USER=root cargo new --bin xbWishlist
 WORKDIR ./xbWishlist
 COPY ./Cargo.toml ./Cargo.toml

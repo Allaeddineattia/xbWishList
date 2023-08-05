@@ -1,0 +1,23 @@
+services:
+  server_app:
+    build:
+      context: .
+      dockerfile: Dockerfile  # Replace with your Dockerfile's name if it's different.
+    ports:
+      - "8080:80"
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - WEB_SERVICE_URL=0.0.0.0:80
+    networks:
+      - network
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo
+    networks:
+      - network
+
+
+networks:
+  network:
