@@ -50,7 +50,7 @@ impl GameRepo{
 
     pub async fn fetch_by_id(&self, id: &str) -> Option<GameModel>{
         let query = doc! {"id": id};
-        self.fetch_by_query(query).await
+        self.fetch_one_by_query(query).await
     }
 
     pub async fn search_by_name<'a>(&self, name:&str, language: & 'a str, markets: &Vec<& 'a str>)-> Vec<FetchGame<'a>>{
@@ -81,7 +81,7 @@ impl GameRepo{
             }
 
         };
-        let game_model = self.fetch_by_query(query).await;
+        let game_model = self.fetch_one_by_query(query).await;
         if let Some(game_model) = game_model  {
             return  game_model.get_game(language, markets);
         }else{

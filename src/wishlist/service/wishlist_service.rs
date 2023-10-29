@@ -38,27 +38,25 @@ impl  WishlistService {
         }
     }
 
-
     pub async fn save(&self, wishlist: &Wishlist){
         self.wishlist_repo.save_wishlist(wishlist).await;
-        if let Some (_) = self.wishlist_repo.fetch_by_name(&wishlist.name).await{
+        if let Some (_) = self.wishlist_repo.fetch_by_name(&wishlist.name, &wishlist.owner_id).await{
             println!("Element saved correctly");
         }else {
             println!("couldn't save the file ")
         }
     }
 
-
-    pub async fn get_wishlist(&self, name: &str) -> Option<Wishlist>{
-        self.wishlist_repo.fetch_by_name(name).await
+    pub async fn get_wishlist(&self, name: &str, owner_id: &str) -> Option<Wishlist>{
+        self.wishlist_repo.fetch_by_name(name, owner_id).await
     }
 
-    pub async fn get_all(&self) -> Vec<Wishlist>{
-        self.wishlist_repo.get_all().await
+    pub async fn get_all(&self, owner_id: &str) -> Vec<Wishlist>{
+        self.wishlist_repo.get_all( owner_id ).await
     }
 
-    pub async fn delete(&self, name: &str)-> bool {
-        self.wishlist_repo.delete_by_name(name).await
+    pub async fn delete(&self, name: &str, owner_id: &str)-> bool {
+        self.wishlist_repo.delete_by_name(name, owner_id).await
     }
 
 }

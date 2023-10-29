@@ -83,10 +83,10 @@ pub trait  Repo <T> where T: Sync + Send + MongoEntity + UniqueEntity
 
     async fn fetch(&self, element: &T) -> Option<T>{
         let query = element.get_unique_selector();
-        self.fetch_by_query(query).await
+        self.fetch_one_by_query(query).await
     }
 
-    async fn fetch_by_query(&self, query: Document) -> Option<T>{
+    async fn fetch_one_by_query(&self, query: Document) -> Option<T>{
         let data_base_collection = self.get_data_base_collection();
         let query_result = data_base_collection.find_one(query,None).await;
         match query_result {

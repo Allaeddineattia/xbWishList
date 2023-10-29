@@ -100,7 +100,7 @@ pub async fn create_wishlist(form: web::Json<dto::input::CreateWishlist>, data: 
             .body(error_msg);
     }
 
-    let wishlist = Wishlist::new(dto.name , wishlist_pref, game_list.unwrap());
+    let wishlist = Wishlist::new(dto.name, dto.owner_id,wishlist_pref, game_list.unwrap());
     data.save_wishlist_properly(wishlist).await
 }
 
@@ -110,10 +110,10 @@ responses(
 (status = 200, description = "get all available Wishlists" )
 )
 )]
-#[get("/all")]
-pub async fn get_all(data: web::Data<WishlistController>)-> impl Responder{
+#[get("/{owner_id}")]
+pub async fn get_all(owner_id: web::Path<String>, data: web::Data<WishlistController>)-> impl Responder{
     let wishlist_service = &*data.wishlist_service;
-    let vec: Vec<output::wishlist_info::WishlistInfo> = wishlist_service.get_all().await.into_iter().map(|entity|{
+    let vec: Vec<output::wishlist_info::WishlistInfo> = wishlist_service.get_all(&owner_id).await.into_iter().map(|entity|{
         WishlistController::entity_to_dto(entity)
     }).collect();
     return HttpResponse::Created()
@@ -129,9 +129,10 @@ responses(
 (status = 200, description = "get all wishlist by name" )
 )
 )]
-#[get("/one/{name}")]
-pub async fn get_wishlist(name: web::Path<String>, data: web::Data<WishlistController>)-> impl Responder{
-    data.fetch_wishlist_properly(&name).await
+#[get("/{owner_id}/{name}")]
+pub async fn get_wishlist(identifier: web::Path<(String, String)>, data: web::Data<WishlistController>)-> impl Responder{
+    let (owner_id, name) = identifier.clone();
+    data.fetch_wishlist_properly(&name, &owner_id).await
 }
 
 #[utoipa::path(
@@ -144,9 +145,9 @@ responses(
 #[patch("/game/add")]
 pub async fn add_game_to_wishlist(form: web::Json<dto::input::AddToWishlistDTO>, data: web::Data<WishlistController>)-> impl Responder{
     let dto = form.into_inner();
-    let wishlist = data.wishlist_service.get_wishlist(&dto.name).await;
+    let wishlist = data.wishlist_service.get_wishlist(&dto.name, &dto.owner_id).await;
     if let None = wishlist{
-        let error_message = format!("couldn't get wishlist with name {}", &dto.name);
+        let error_message = format!("couldn't get wishlist with name {} for user with id {}", &dto.name, &dto.owner_id);
         return HttpResponse::BadRequest()
             .body(error_message);
     }
@@ -183,7 +184,7 @@ responses(
 #[patch("/update_preference")]
 pub async fn change_preference(form: web::Json<dto::input::UpdateWishlistPreferenceDTO>, data: web::Data<WishlistController>) -> impl Responder {
     let dto = form.into_inner();
-    let result = data.wishlist_service.get_wishlist(&dto.name).await;
+    let result = data.wishlist_service.get_wishlist(&dto.name, &dto.owner_id).await;
     if let None = result
     {
         return HttpResponse::BadRequest()
@@ -195,7 +196,8 @@ pub async fn change_preference(form: web::Json<dto::input::UpdateWishlistPrefere
         language: dto.language.unwrap_or( wishlist.preference.language),
         markets_by_default: dto.markets.map(|markets| Markets::from_vec_str(markets).0).unwrap_or(wishlist.preference.markets_by_default)
     };
-    let wishlist = Wishlist::new(dto.name.to_string(), wishlist_pref, wishlist.games);
+    let wishlist = Wishlist::new(dto.name.to_string(),
+                                 dto.owner_id.to_string(), wishlist_pref, wishlist.games);
     if let None = dto.games
     {
         return data.save_wishlist_properly(wishlist).await;
@@ -230,7 +232,8 @@ pub async fn change_preference(form: web::Json<dto::input::UpdateWishlistPrefere
             .body(error_msg);
     }
     let wishlist_games = wishlist_games.unwrap();
-    let wishlist = Wishlist::new(dto.name.to_string(), wishlist.preference, wishlist_games);
+    let wishlist = Wishlist::new(dto.name.to_string(), dto.owner_id.to_string(),
+                                 wishlist.preference, wishlist_games);
     return data.save_wishlist_properly(wishlist).await;
 
 }
@@ -245,7 +248,7 @@ responses(
 #[patch("/game/remove")]
 pub async fn remove_game_from_wishlist(form: web::Json<dto::input::RemoveFromWishlistDTO>, data: web::Data<WishlistController>) -> impl Responder {
     let dto = form.into_inner();
-    let result = data.wishlist_service.get_wishlist(&dto.name).await;
+    let result = data.wishlist_service.get_wishlist(&dto.name, &dto.owner_id).await;
     if let None = result
     {
         return HttpResponse::BadRequest()
@@ -268,11 +271,12 @@ responses(
 (status = 200, description = "delete wish list with name" )
 )
 )]
-#[delete("/{name}")]
-pub async fn delete_wishlist(name: web::Path<String>, data: web::Data<WishlistController>)-> impl Responder{
+#[delete("/{owner_id}/{name}")]
+pub async fn delete_wishlist(identifier: web::Path<(String, String)>,data: web::Data<WishlistController>)-> impl Responder{
     let wishlist_service = &*data.wishlist_service;
-    if let Some(_) = wishlist_service.get_wishlist(&name).await{
-        if wishlist_service.delete(&name).await{
+    let (owner_id, name) = identifier.clone();
+    if let Some(_) = wishlist_service.get_wishlist(&name, &owner_id).await{
+        if wishlist_service.delete(&name, &owner_id).await{
             let message = format!("{} is deleted", &name);
             HttpResponse::Ok().body(message)
         }else {
@@ -293,12 +297,12 @@ impl WishlistController{
     pub async fn save_wishlist_properly(&self, wishlist: Wishlist) -> HttpResponse
     {
         self.wishlist_service.save(&wishlist).await;
-        self.fetch_wishlist_properly(&wishlist.name).await
+        self.fetch_wishlist_properly(&wishlist.name, &wishlist.owner_id).await
     }
 
-    pub async fn fetch_wishlist_properly(&self, wishlist_name: &str) -> HttpResponse
+    pub async fn fetch_wishlist_properly(&self, wishlist_name: &str, owner_id: &str) -> HttpResponse
     {
-        self.wishlist_service.get_wishlist(wishlist_name).await
+        self.wishlist_service.get_wishlist(wishlist_name, owner_id).await
             .map(
                 |wishlist|HttpResponse::Created()
                                     .content_type("application/json")
@@ -357,6 +361,7 @@ impl WishlistController{
         }).collect();
         output::wishlist_info::WishlistInfo{
             name: wishlist.name.clone(),
+            owner_id: wishlist.owner_id.clone(),
             games,
             language: wishlist.preference.language.clone(),
             markets: wishlist.preference.markets().into_iter().map(|s| {s.to_string()}).collect()

@@ -35,7 +35,6 @@ impl Repo<WishlistModel> for WishlistRepo{
     fn get_data_base_collection(&self) -> &Collection<Document> {
         &self.data_base_collection
     }
-
     fn get_collection_name(&self) -> &str {
         &self.collection_name
     }
@@ -66,6 +65,7 @@ impl WishlistRepo {
         }
         Wishlist::new(
             model.name,
+            model.owner_id,
             preference,
             wishlist_elements)
     }
@@ -88,9 +88,9 @@ impl WishlistRepo {
         }
     }
 
-    pub async fn fetch_by_name(&self, name: &str) -> Option<Wishlist>{
-        let query = doc! {"name": name};
-        let fetch:Option<WishlistModel> = self.fetch_by_query(query).await;
+    pub async fn fetch_by_name(&self, name: &str, owner_id: &str) -> Option<Wishlist>{
+        let query = doc! {"name": name, "owner_id": owner_id};
+        let fetch:Option<WishlistModel> = self.fetch_one_by_query(query).await;
         if let Some(model) = fetch{
             Some(self.convert_model_to_entity(model).await)
         }else{
@@ -98,8 +98,8 @@ impl WishlistRepo {
         }
     }
 
-    pub async fn delete_by_name(&self, name: &str) -> bool{
-        let query = doc! {"name": name};
+    pub async fn delete_by_name(&self, name: &str, owner_id: &str) -> bool{
+        let query = doc! {"name": name, "owner_id": owner_id};
         let result = self.get_data_base_collection().delete_one(query, None).await;
         match result {
             Ok(res) => {
@@ -113,9 +113,10 @@ impl WishlistRepo {
         }
     }
 
-    pub async fn get_all(&self) -> Vec<Wishlist>{
+    pub async fn get_all(&self, owner_id: &str) -> Vec<Wishlist>{
         let mut vec = Vec::<Wishlist>::new();
-        for model in self.fetch_all().await.into_iter(){
+        let query = doc! {"owner_id": owner_id};
+        for model in self.fetch_many_by_query(query).await.into_iter(){
             vec.push(self.convert_model_to_entity(model).await);
         };
         vec
@@ -128,6 +129,7 @@ impl WishlistRepo {
     fn entity_to_model(&self, wishlist: &Wishlist) -> WishlistModel{
         WishlistModel{
             name: wishlist.name.clone(),
+            owner_id: wishlist.owner_id.clone(),
             games: wishlist.games.iter().map(|x|{self.element_entity_to_model(x.1)}).collect(),
             preference: self.preference_entity_to_model(wishlist.preference())
         }

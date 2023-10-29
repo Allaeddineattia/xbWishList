@@ -20,6 +20,7 @@ pub struct WishlistModel{
     pub name: String,
     pub games: Vec<WishlistElementModel>,
     pub preference: WishlistPreferencesModel,
+    pub owner_id: String,
 }
 
 pub struct WishlistElementModel{
@@ -38,12 +39,14 @@ impl MongoEntity for WishlistModel{
         doc!{
             "name": &self.name,
             "games": games,
-            "preference": &self.preference.to_document()
+            "preference": &self.preference.to_document(),
+            "owner_id": &self.owner_id
         }
     }
 
     fn from_document(doc: &Document) -> Self {
         let name = String::from(doc.get_str("name").unwrap());
+        let owner_id = String::from(doc.get_str("owner_id").unwrap());
         let games : Vec<WishlistElementModel> = doc.get_array("games").unwrap().into_iter().map(
             |bson|{
                 match bson{
@@ -60,6 +63,7 @@ impl MongoEntity for WishlistModel{
         let preference = WishlistPreferencesModel::from_document(doc.get_document("preference").unwrap());
         Self{
             name,
+            owner_id,
             games,
             preference
         }
@@ -68,14 +72,12 @@ impl MongoEntity for WishlistModel{
 
 impl UniqueEntity for WishlistModel{
     fn get_unique_selector(&self) -> Document {
-        doc! {"name": &self.name}
+        doc! {"name": &self.name, "owner_id": &self.owner_id}
     }
 }
 
 impl MongoEntity for WishlistElementModel{
     fn to_document(&self) -> Document {
-
-
         doc!{
             "game_id": &self.game_id,
             "markets": &self.markets,
@@ -108,7 +110,6 @@ impl MongoEntity for WishlistPreferencesModel{
         doc!{
             "language": &self.language,
             "markets": &self.markets,
-
         }
     }
 

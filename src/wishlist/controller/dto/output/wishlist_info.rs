@@ -5,6 +5,7 @@ use crate::game::controller::GameResponse;
 #[serde(rename_all = "PascalCase")]
 pub struct WishlistInfo{
     pub name: String,//Name
+    pub owner_id: String,//OwnerId
     pub games: Vec<WishlistInfoElement>,//Game
     pub language: String,//Language
     pub markets: Vec<String>,//Markets

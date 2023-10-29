@@ -19,6 +19,7 @@ use crate::game::xbox_api_client::markets::MARKETS;
 
 pub struct Wishlist{
     pub name: String,
+    pub owner_id: String,
     pub games: HashMap<String, WishlistElement>,
     pub preference: WishlistPreferences,
 }
@@ -40,9 +41,10 @@ pub struct Markets{
 
 
 impl Wishlist {
-    pub fn new(name: String,  preference: WishlistPreferences, games: HashMap<String, WishlistElement>) -> Self{
+    pub fn new(name: String, owner_id: String, preference: WishlistPreferences, games: HashMap<String, WishlistElement>) -> Self{
         Wishlist{
             name,
+            owner_id,
             games,
             preference,
         }

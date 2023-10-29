@@ -5,6 +5,8 @@ use utoipa::{ToSchema };
 pub struct CreateWishlist{
     #[schema(example = "My Wishlist")]
     pub name: String,//Name
+    #[schema(example = "00-B0-D0-63-C2-26")]
+    pub owner_id: String,//OwnerId
     #[schema(example = "en-US")]
     pub language: String,//Language
     #[schema(example = "[\"US\",\"BR\"]")]
